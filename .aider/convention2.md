@@ -1,3 +1,4 @@
+- IT's FORBIDDEN TO ADD COMMENT THAT DESCRIBE ACTION SUCH AS "ADDED"
 - Use python 3.12 style
 - Always use type hints
 - Type hints must be using native type when possible

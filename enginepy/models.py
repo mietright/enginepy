@@ -217,7 +217,7 @@ class UtmParams(BaseModel):
 
 class EngineTrigger(BaseModel):
     trigger_id: str = Field(...)
-    name: str = Field("")
+    name: str = Field(default="")
     request_id: int | None = Field(None)
     status: dict[str, Any] | None = Field(default=None)
     client: str = Field(default="enginepy")

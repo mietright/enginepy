@@ -1,4 +1,4 @@
-.PHONY: format format-test check fix clean clean-build clean-pyc clean-test coverage install pylint pylint-quick pyre test publish poetry-check publish isort isort-check docker-push docker-build migrate
+.PHONY: format format-test check fix clean clean-build clean-pyc clean-test coverage install pylint pylint-quick pyre test publish poetry-check publish isort isort-check docker-push docker-build migrate lint
 
 APP_ENV ?= dev
 VERSION := `cat VERSION`
@@ -67,8 +67,8 @@ pylint:
 
 pyright:
 	poetry run pyright
-
-check: format-test isort-check ruff poetry-check
+lint: format-test isort-check ruff poetry-check
+check: lint pyright
 
 pyre: pyre-check
 

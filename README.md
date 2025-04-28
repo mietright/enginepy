@@ -1,8 +1,7 @@
 # enginepy
 
-[![CI](https://github.com/<your-github-username>/<your-repo-name>/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-github-username>/<your-repo-name>/actions/workflows/ci.yml)
-[![PyPI version](https://badge.fury.io/py/enginepy.svg)](https://badge.fury.io/py/enginepy) <!-- Update if published to PyPI -->
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) <!-- Choose appropriate license -->
+[![CI](https://github.com/mietright/enginepy/actions/workflows/ci.yml/badge.svg)](https://github.com/mietright/enginepy/actions/workflows/ci.yml)
+
 
 `enginepy` is a Python client library for interacting with the [Specify Engine Name] API. It provides asynchronous methods for common operations like updating documents, triggering actions, and managing requests.
 
@@ -199,4 +198,4 @@ Contributions are welcome! Please follow these steps:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. <!-- Create a LICENSE file if you don't have one -->
+This project is closed source and copyrighted by CONNY GmbH. All rights reserved.
