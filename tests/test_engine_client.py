@@ -1,6 +1,6 @@
 import json  # Add json import for data serialization check
+from collections.abc import AsyncIterator  # Added AsyncIterator
 from datetime import datetime  # Added
-from typing import Any, AsyncIterator # Added AsyncIterator
 from unittest.mock import AsyncMock, call  # Added for mocking async method
 
 import pytest
@@ -23,7 +23,7 @@ from enginepy.models import (
     EngineField,
     EngineRequest,
     EngineTrigger,
-    EngineTypeEnum, # Added
+    EngineTypeEnum,  # Added
     ManagerEnum,
     OutputFormatEnum,
     WithContentMode,
