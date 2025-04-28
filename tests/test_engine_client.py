@@ -1,5 +1,6 @@
 import json  # Add json import for data serialization check
 from datetime import datetime  # Added
+from typing import Any, AsyncIterator # Added AsyncIterator
 from unittest.mock import AsyncMock, call  # Added for mocking async method
 
 import pytest
@@ -22,6 +23,7 @@ from enginepy.models import (
     EngineField,
     EngineRequest,
     EngineTrigger,
+    EngineTypeEnum, # Added
     ManagerEnum,
     OutputFormatEnum,
     WithContentMode,
@@ -66,7 +68,7 @@ def expected_user_agent() -> str:
 
 
 @pytest_asyncio.fixture
-async def client(test_endpoint: str, test_token: str) -> EngineClient:
+async def client(test_endpoint: str, test_token: str) -> AsyncIterator[EngineClient]:
     """Fixture to create an EngineClient instance for testing."""
     instance = EngineClient(endpoint=test_endpoint, token=test_token)
     yield instance
