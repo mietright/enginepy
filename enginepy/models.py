@@ -92,11 +92,8 @@ class AwsPrediction(BaseModel):
 
 class AwsJobDescribe(BaseModel):
     id: str = Field(default="", validation_alias=AliasChoices("JobId", "id"), serialization_alias="JobId")
-    name: str = Field(
-        default="",
-        validation_alias=AliasChoices("JobName", "name"),
-        serialization_alias="JobName",
-    )
+    # Temporarily removed aliases to diagnose pyright error
+    name: str = Field(default="")
     arn: str = Field(
         default="",
         validation_alias=AliasChoices("JobArn", "arn"),
