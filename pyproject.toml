@@ -1,0 +1,62 @@
+[project]
+name = "enginepy"
+version = "0.1.0"
+description = ""
+authors = [{email="2t.antoine@gmail.com", name="ant31"}]
+readme = "README.md"
+packages = [{ include = "enginepy" }]
+requires-python = ">=3.11,<4"
+dependencies = [
+             "asyncio (>=3)",
+             "pydantic",
+             "click",
+             "pyyaml",
+             "sentry-sdk[fastapi]",
+             "typing-extensions",
+             "ant31box @ git+https://github.com/ant31/ant31box@main",
+             "aiohttp",
+             "activealchemy @ git+https://github.com/ant31/activealchemy@2fe515719b4d2064adf423cb96f766cb8b78625b",
+             "aiohttp-prometheus-exporter",
+             "logfire[aiohttp] (>=3.10.0,<4.0.0)",
+                          ]
+
+
+[tool.poetry.group.dev.dependencies]
+aioresponses = "*"
+pyreadline = "*"
+pylint-pydantic = "*"
+requests = "*"
+black = "*"
+pylint = "*"
+# pyre-check = "*"
+types-requests = "*"
+isort = "*"
+pytest = "*"
+pytest-mock = "*"
+coverage = "*"
+pytest-cov = "*"
+pytest-ordering = "*"
+pytest-asyncio = "*"
+pyright = "*"
+pytest-aioresponses = "*"
+ruff = "*"
+
+ipython = "^8.0.0"
+
+[tool.black]
+line-length = 120
+target-version = ['py312']
+include = '\.pyi?$'
+
+[tool.isort]
+atomic = true
+profile = "black"
+line_length = 120
+skip_gitignore = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest]
+testpaths = "tests/"

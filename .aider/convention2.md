@@ -1,0 +1,11 @@
+- Use python 3.12 style
+- Always use type hints
+- Type hints must be using native type when possible
+- Type hint must use | instead of Union and optional
+- Always use pydantic v2 for any dict
+- When using pydnatic always initialize fiedls with Field(default=, description=) or Field(...) when required value, or default_factory
+- Pydantic Prefer a default value than ...
+- Pydantic allow extra when parsing external APIs so it doesn't break when API we don't control changes
+- Pydantic, uses model_validate, model_dump methods instead of Model(**kwargs) and dump()
+- for pytest: 1. use fixtures instead of constant. 2. Uses multiple examples for the same test using parameterize when it makes sense. 3. Instead of creating long tests that cover multiple uses cases, prefer to build multiple more simple tests. 4. Leave someflexibility for the code to change, try to not hardcode every value and results when 
+- SQL tables are single, do not use plural form

@@ -1,0 +1,7 @@
+The project goals are:
+ - Python client to connect to the CONNY's engine API
+ - The client is using asyncio via the library ant31box
+ - The project name is enginepy
+ - The project will be imported in other python project via pacakge dependency
+Non-goals:
+ - Managing retries

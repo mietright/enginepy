@@ -1,0 +1,102 @@
+---
+stages:
+  - test
+
+include:
+  - project: 'connylegal/mietright_deployments'
+    ref: main
+    file: '/.gitlab-ci/build-container.yaml'
+
+  - project: 'connylegal/mietright_deployments'
+    ref: main
+    file: '/.gitlab-ci/deploy.yaml'
+
+variables:
+  FAILFASTCI_NAMESPACE: connylegal
+  OCI_REPO: img.conny.dev
+  CONTAINER: conny/enginepy
+  IMAGE_NAME: $OCI_REPO/$CONTAINER
+  APPNAME: enginepy
+  APP: enginepy
+  DEFAULT_TAG: v.$CI_COMMIT_REF_SLUG
+
+# BUILD IMAGE
+
+                    
+build image:
+  stage: test
+  extends: .build-container
+  variables:
+    TAG: v.$CI_COMMIT_REF_SLUG
+
+# # run TEST
+unit test:
+  image:
+    name: img.conny.dev/conny/enginepy:ci.v1
+  stage: test
+  services:
+    - name: temporalio/server
+      alias: temporal
+      entrypoint: ["temporal"]
+      command:
+        - server
+        - start-dev
+  before_script:
+    - pip install poetry -U
+    - poetry install
+  script:
+    - make test
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: report.xml
+  tags:
+    - kubernetes
+
+
+# code lint:
+#   image:
+#     name: img.conny.dev/conny/enginepy:ci.v1
+#   stage: test
+#   before_script:
+#     - apt-get update && apt-get install -y git
+#     - ls
+#     - pip install poetry -U
+#     - poetry install
+#   script:
+#     - make check
+#   tags:
+#     - kubernetes
+
+# TAGS IMAGES
+image tag:
+  stage: test
+  extends: .tag-main
+  needs:
+    - build image
+  variables:
+    SOURCE_TAG: v.$CI_COMMIT_REF_SLUG
+
+# Deploy
+deploy-staging:
+  stage: test
+  needs:
+    - image tag
+  extends: .deploy-staging
+
+# Deploy branch to staging
+deploy-pr-staging:
+  stage: test
+  needs:
+    - build image
+  extends: .deploy-pr-staging
+
+deploy-production:
+  stage: test
+  needs:
+    - image tag
+  extends: .deploy-production-auto
