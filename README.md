@@ -3,7 +3,7 @@
 [![CI](https://github.com/mietright/enginepy/actions/workflows/ci.yml/badge.svg)](https://github.com/mietright/enginepy/actions/workflows/ci.yml)
 
 
-`enginepy` is a Python client library for interacting with the [Specify Engine Name] API. It provides asynchronous methods for common operations like updating documents, triggering actions, and managing requests.
+`enginepy` is a Python client library for interacting with the Mietright Engine API. It provides asynchronous methods for common operations like updating documents, triggering actions, and managing requests.
 
 ## Features
 
@@ -183,18 +183,6 @@ Tests are written using `pytest` and `pytest-asyncio`.
     poetry run pytest
     ```
 
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1.  Fork the repository.
-2.  Create a new branch (`git checkout -b feature/your-feature-name`).
-3.  Make your changes.
-4.  Ensure tests pass (`make test`).
-5.  Ensure code is linted and formatted (`poetry run ruff check . && poetry run ruff format .`).
-6.  Commit your changes (`git commit -am 'Add some feature'`).
-7.  Push to the branch (`git push origin feature/your-feature-name`).
-8.  Create a new Pull Request.
 
 ## License
 
