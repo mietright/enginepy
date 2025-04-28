@@ -237,7 +237,7 @@ async def test_create_request_success(client: EngineClient, test_endpoint: str, 
     req = EngineRequest(
         product="prod_a",
         funnel="funnel_b",
-        fields=[EngineField(field="field1", answer="value1")] # type defaults to "string"
+        fields=[EngineField(field="field1", answer="value1", type=EngineTypeEnum.STRING)] # type defaults to "string"
     )
     # Match the exact data payload recorded by aioresponses in the previous failure.
     # This indicates the client's model_dump excluded defaults like 'type', 'documents', 'documents_presign'.
@@ -280,7 +280,7 @@ async def test_update_request_success(client: EngineClient, test_endpoint: str, 
     req = EngineRequest(
         product="prod_a_updated",
         funnel="funnel_b_updated",
-        fields=[EngineField(field="field1", answer="value1_updated")] # type defaults to "string"
+        fields=[EngineField(field="field1", answer="value1_updated", type=EngineTypeEnum.STRING)] # type defaults to "string"
     )
     # Match the exact data payload recorded by aioresponses in the previous failure.
     # This indicates the client's model_dump excluded defaults like 'type', 'documents', 'documents_presign'.
@@ -366,7 +366,7 @@ async def test_update_insights_success(client: EngineClient, test_endpoint: str,
 async def test_update_doc_suggestions_aws_success(client: EngineClient, test_endpoint: str, test_token: str, expected_user_agent: str):
     """Test successful document suggestions update using AwsClassifierResult."""
     aws_result = AwsClassifierResult(
-        job=AwsJobDescribe(id="job-123", submit_time=datetime.now(), end_time=datetime.now()),
+        job=AwsJobDescribe(id="job-123", name="test-job", submit_time=datetime.now(), end_time=datetime.now()), # Added name
         inference=[AwsInference(line="doc1", classes=[])],
         model="aws-model-v1"
     )
