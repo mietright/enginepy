@@ -138,7 +138,7 @@ auto-accept-architect: true
 # Repomap settings:
 
 ## Suggested number of tokens to use for repo map, use 0 to disable
-map-tokens: 15000
+map-tokens: 8000
 
 ## Control how often the repo map is refreshed. Options: auto, always, files, manual (default: auto)
 map-refresh: always
@@ -267,7 +267,7 @@ attribute-commit-message-committer: false
 #lint: false
 
 ## Specify lint commands to run for different languages, eg: "python: flake8 --select=..." (can be used multiple times)
-lint-cmd: poetry run ruff check
+lint-cmd: poetry run ruff check --fix && poetry run ruff check
 ## Specify multiple values like this:
 #lint-cmd:
 #  - xxx

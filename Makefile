@@ -29,20 +29,16 @@ help:
 clean: clean-build clean-pyc clean-test
 
 clean-build:
-	rm -fr build/
-	rm -fr dist/
-	rm -fr .eggs/
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune  -name '*.egg-info' -exec rm -fr {} +
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune -name '*.egg' -exec rm -f {} +
+	rm -rf build/ dist/ .eggs/
+	find . \( -path "./.venv" -o -path "./.cache" \) -prune -o \
+	       \( -name '*.egg-info' -o -name '*.egg' \) -exec rm -rf {} +
 
 clean-pyc:
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune -name '*.pyc' -exec rm -f {} +
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune -name '*.pyo' -exec rm -f {} +
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune -name '*~' -exec rm -f {} +
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune -name 'flycheck_*' -exec rm -f {} +
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune -name '__pycache__' -exec rm -fr {} +
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune -name '.mypy_cache' -exec rm -fr {} +
-	find . -not -path "./.venv/*" -not -path "./.cache/*" -prune -name '.pyre' -exec rm -fr {} +
+	rm -f pyrightconfig.json
+	find . \( -path "./.venv" -o -path "./.cache" \) -prune -o \
+	       \( -name '*.pyc' -o -name '*.pyo' -o -name '*~' -o -name 'flycheck_*' \) -exec rm -f {} +
+	find . \( -path "./.venv" -o -path "./.cache" \) -prune -o \
+	       \( -name '__pycache__' -o -name '.mypy_cache' -o -name '.pyre' \) -exec rm -rf {} +
 
 clean-test:
 	rm -fr .tox/
@@ -69,7 +65,10 @@ pylint-quick:
 pylint:
 	poetry run pylint --rcfile=".pylintrc" $(package)
 
-check: format-test isort-check ruff poetry-check
+pyright:
+	poetry run pyright
+
+check: format-test isort-check ruff poetry-check pyright
 
 pyre: pyre-check
 

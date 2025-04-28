@@ -9,3 +9,8 @@
 - Pydantic, uses model_validate, model_dump methods instead of Model(**kwargs) and dump()
 - for pytest: 1. use fixtures instead of constant. 2. Uses multiple examples for the same test using parameterize when it makes sense. 3. Instead of creating long tests that cover multiple uses cases, prefer to build multiple more simple tests. 4. Leave someflexibility for the code to change, try to not hardcode every value and results when 
 - SQL tables are single, do not use plural form
+- Write good documentation
+- Max line lenght is 120, if it's over the linter will fail 
+- Comments in the code must be relevant to the code comprehension. Comment must be timeless(meaning relevant months or years later), about code and not about action performed
+- TODO comment are allowed but to use when necessary only
+

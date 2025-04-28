@@ -1,6 +1,6 @@
 import os
 
-from enginepy.config import config
+from enginepy.config import Config, EngineConfigSchema, LogfireConfigSchema, config
 
 
 def test_config_test_env():
@@ -9,10 +9,8 @@ def test_config_test_env():
 
 def test_config_fields():
     assert config().sentry.dsn is None
-    assert config().server.port == 8080
     assert config().logging.level == "info"
     assert config().conf.app.env == "test"
-    assert config().conf.app.prometheus_dir == ".cache/prom"
     assert config().conf.name == "enginepy-test"
 
 
@@ -49,3 +47,15 @@ def test_config_env_precedence(monkeypatch):
 def test_config_path_failed_path_fallback():
     config("tests/data/config-dontexist.yaml", reload=True)
     assert config().app.env == "dev"
+
+
+def test_config_property_accessors():
+    """Test accessing config properties like logfire and engine."""
+    cfg: Config = config()
+    # Accessing the properties covers the getter methods
+    logfire_conf = cfg.logfire
+    engine_conf = cfg.engine
+    assert isinstance(logfire_conf, LogfireConfigSchema)
+    assert isinstance(engine_conf, EngineConfigSchema)
+    # Optionally, check a value from the test config
+    assert engine_conf.token == "sometesttoken" # Corrected token value from test_config.yaml

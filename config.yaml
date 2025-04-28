@@ -1,74 +1,15 @@
-[32mINFO[0m:     Config loaded: config.yaml
-antgent:
-  postgresql:
-    async_driver: asyncpg
-    connect_timeout: 10
-    create_engine_kwargs: {}
-    db: engine
-    debug: false
-    default_schema: public
-    driver: psycopg2
-    host: localhost
-    kwargs: {}
-    mode: sync
-    params: {}
-    password: oi
-    port: 5432
-    use_internal_pool: true
-    user: al
 app:
   env: dev
-  prometheus_dir: /tmp/prometheus
-name: antgent
-openai:
-  organization: Ant31
-  organization_id: org-1xZoRaUM
-  projects:
-  - api_key: antgent-openaiKEY
-    name: openai
-    project_id: proj_OIMUS8HgaQZ
-    url: null
-  - api_key: antgent-openaiKEY
-    name: gemini
-    project_id: proj_NrZHbXS1CDXh
-    url: https://generativelanguage.googleapis.com/v1beta/openai/
-  url: null
+logging:
+  level: info
+name: enginepy-test
+
 sentry:
   dsn: null
   environment: null
   release: null
   traces_sample_rate: null
-server:
-  cors:
-    allow_credentials: false
-    allow_headers:
-    - '*'
-    allow_methods:
-    - '*'
-    allow_origin_regex: .*
-    allow_origins:
-    - http://localhost:8080
-    - http://localhost:8000
-    - http://localhost
-  host: 0.0.0.0
-  middlewares: []
-  middlewares_replace_default: null
-  port: 8080
-  reload: false
-  routers: []
-  routers_replace_default: null
-  server: ant31box.server.server:serve
-  token: ''
-  token_auth:
-    header_name: token
-    parameter: token_auth
-    skip_paths:
-    - /api/v1/auth/login
-    - /api/v1/auth/register
-    - /docs
-    - /openapi.json
-    - /redoc
-    - /metrics
-    - /health
-    token: ''
 
+engine:
+  endpoint: 'https://engine.stg.conny.dev'
+  token: sometesttoken
