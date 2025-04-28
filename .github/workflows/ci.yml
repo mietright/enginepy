@@ -43,11 +43,11 @@ jobs:
       run: poetry install --no-interaction --no-root
 
 
-    - name: "Pyright"
-      uses: jakebailey/pyright-action@v2
-    # If you use pylint, uncomment the following step
     - name: Lint with Pylint
       run: make check
 
     - name: Run tests with Pytest
       run: make test
+    - run: echo "$(poetry env info --path)/bin" >> $GITHUB_PATH
+    - name: "Pyright"
+      uses: jakebailey/pyright-action@v2
