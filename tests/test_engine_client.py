@@ -241,15 +241,12 @@ async def test_create_request_success(client: EngineClient, test_endpoint: str, 
         funnel="funnel_b",
         fields=[EngineField(field="field1", answer="value1", type=EngineTypeEnum.STRING)] # type defaults to "string"
     )
-    # Match the exact data payload recorded by aioresponses in the previous failure.
-    # This indicates the client's model_dump excluded defaults like 'type', 'documents', 'documents_presign'.
+    # Match the actual data payload: model_dump(exclude_unset=True) removes the default 'type'.
     expected_data = {
         "product": "prod_a",
         "funnel": "funnel_b",
-        # The actual 'fields' JSON string did not contain 'type'.
         "fields": json.dumps([{"field": "field1", "answer": "value1"}], sort_keys=True, default=str),
-        # 'documents' and 'documents_presign' were not in the actual payload.
-        "request_id": None, # This was present in the actual payload.
+        "request_id": None, # Explicitly set to None for creation in client code
     }
     response_payload = {"request_id": 789, "status": "created"}
     expected_url = f"{test_endpoint}/api/admin/data_source"
@@ -284,15 +281,12 @@ async def test_update_request_success(client: EngineClient, test_endpoint: str, 
         funnel="funnel_b_updated",
         fields=[EngineField(field="field1", answer="value1_updated", type=EngineTypeEnum.STRING)] # type defaults to "string"
     )
-    # Match the exact data payload recorded by aioresponses in the previous failure.
-    # This indicates the client's model_dump excluded defaults like 'type', 'documents', 'documents_presign'.
+    # Match the actual data payload: model_dump(exclude_unset=True) removes the default 'type'.
     expected_data = {
         "product": "prod_a_updated",
         "funnel": "funnel_b_updated",
-        # The actual 'fields' JSON string did not contain 'type'.
         "fields": json.dumps([{"field": "field1", "answer": "value1_updated"}], sort_keys=True, default=str),
-        # 'documents' and 'documents_presign' were not in the actual payload.
-        "request_id": request_id, # This was present in the actual payload.
+        "request_id": request_id, # Set for update in client code
     }
     response_payload = {"status": "updated"}
     expected_url = f"{test_endpoint}/api/admin/data_source"
