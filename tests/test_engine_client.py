@@ -1,7 +1,7 @@
 import json  # Add json import for data serialization check
-from collections.abc import AsyncIterator  # Added AsyncIterator
-from datetime import datetime  # Added
-from unittest.mock import AsyncMock, call  # Added for mocking async method
+from collections.abc import AsyncIterator
+from datetime import datetime
+from unittest.mock import AsyncMock, call
 
 import pytest
 import pytest_asyncio
@@ -23,7 +23,7 @@ from enginepy.models import (
     EngineField,
     EngineRequest,
     EngineTrigger,
-    EngineTypeEnum,  # Added
+    EngineTypeEnum,
     ManagerEnum,
     OutputFormatEnum,
     WithContentMode,
@@ -362,7 +362,7 @@ async def test_update_insights_success(client: EngineClient, test_endpoint: str,
 async def test_update_doc_suggestions_aws_success(client: EngineClient, test_endpoint: str, test_token: str, expected_user_agent: str):
     """Test successful document suggestions update using AwsClassifierResult."""
     aws_result = AwsClassifierResult(
-        job=AwsJobDescribe(id="job-123", name="test-job", submit_time=datetime.now(), end_time=datetime.now()), # Added name
+        job=AwsJobDescribe(id="job-123", name="test-job", submit_time=datetime.now(), end_time=datetime.now()), 
         inference=[AwsInference(line="doc1", classes=[])],
         model="aws-model-v1"
     )
