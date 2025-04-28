@@ -20,7 +20,7 @@ variables:
 # # run TEST
 unit test:
   image:
-    name: img.conny.dev/conny/enginepy:ci.v1
+    name: python:3.12
   stage: test
   before_script:
     - pip install poetry -U
@@ -41,11 +41,9 @@ unit test:
 
 code lint:
   image:
-    name: img.conny.dev/conny/enginepy:ci.v1
+    name: python:3.12
   stage: test
   before_script:
-    - apt-get update && apt-get install -y git
-    - ls
     - pip install poetry -U
     - poetry install
   script:
