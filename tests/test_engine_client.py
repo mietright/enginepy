@@ -113,6 +113,70 @@ async def test_health_failure(client: EngineClient, test_endpoint: str):
 
 
 @pytest.mark.asyncio
+async def test_get_case_data_success(
+    client: EngineClient, test_endpoint: str, test_token: str, request_id: int, expected_user_agent: str
+):
+    """Tests successful retrieval of case data."""
+    expected_path = f"/api/case_data"
+    expected_url = f"{test_endpoint}{expected_path}"
+    # Ensure params match the type expected by aiohttp/aioresponses (usually strings)
+    expected_params = {"request_id": str(request_id)}
+    expected_headers = {
+        "Accept": "*/*",
+        "token": test_token,
+        "User-Agent": expected_user_agent,
+        # BaseClient might add default Content-Type even for GET, match if necessary
+        # "Content-Type": "application/json", # Add if observed in actual calls
+    }
+    expected_response_payload = {"case_id": request_id, "status": "processing", "details": "some data"}
+    expected_timeout = ClientTimeout(total=30) # Match timeout used in client method
+
+    with aioresponses() as m:
+        # Mock the specific URL and method
+        m.get(expected_url, status=200, payload=expected_response_payload) # No need to mock headers in response
+
+        response = await client.get_case_data(request_id)
+
+        assert response == expected_response_payload
+        # Verify the call details precisely
+        m.assert_called_once_with(
+            expected_url,
+            method="GET",
+            headers=expected_headers,
+            params=expected_params,
+            ssl=False,  # Based on client initialization
+            timeout=expected_timeout,
+        )
+
+
+@pytest.mark.asyncio
+async def test_get_case_data_failure(client: EngineClient, test_endpoint: str, request_id: int):
+    """Tests failure scenario for retrieving case data (e.g., 404 Not Found)."""
+    expected_path = f"/api/case_data"
+    expected_url = f"{test_endpoint}{expected_path}"
+    expected_params = {"request_id": str(request_id)}
+    expected_timeout = ClientTimeout(total=30) # Match timeout used in client method
+
+    with aioresponses() as m:
+        # Mock the URL to return a 404 status
+        m.get(expected_url, status=404)
+
+        with pytest.raises(ClientResponseError) as excinfo:
+            await client.get_case_data(request_id)
+
+        assert excinfo.value.status == 404
+        # Verify the call was made, even though it failed
+        m.assert_called_once_with(
+            expected_url,
+            method="GET",
+            params=expected_params,
+            # Headers check omitted for brevity in failure case, but could be added
+            ssl=False,
+            timeout=expected_timeout,
+        )
+
+
+@pytest.mark.asyncio
 async def test_update_doc_success(client: EngineClient, test_endpoint: str, test_token: str, doc_id: int, expected_user_agent: str):
     """Test successful document update."""
     ocr_pages = ["page 1 text", "page 2 text"]
