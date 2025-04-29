@@ -158,15 +158,17 @@ def _print_result(result: Any) -> None:
     elif result is None:
         print("Operation completed successfully (No content returned).")
     elif isinstance(result, bool):
-        print(json.dumps({"success": result}))
+        # Use indent=2 for consistency
+        print(json.dumps({"success": result}, indent=2))
     else:
         # Default JSON dump for other types
         try:
             # Use default=str for types json doesn't handle natively
             print(json.dumps(result, indent=2, default=str))
-        except TypeError as e:
-            logger.error("Failed to serialize result to JSON: %s", e)
-            print(f"Command executed, but result could not be serialized to standard JSON: {result}")
+        except TypeError:
+            # If default=str still fails, print the error message and the object representation
+            logger.warning("Result could not be serialized to standard JSON, even with default=str.")
+            print(f"Command executed, but result could not be serialized to standard JSON: {result!r}")
 
 
 # --- Helper Functions for Command Execution ---
