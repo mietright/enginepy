@@ -481,4 +481,3 @@ exclude = [
 detect-string-imports = true
 [lint.isort]
 known-first-party = ["enginepy"]
-known-third-party = ["agents"]
