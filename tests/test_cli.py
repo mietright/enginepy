@@ -9,14 +9,18 @@ import pydantic  # Import pydantic
 import pytest
 import typer  # Import typer
 from aiohttp import ClientResponseError
-from pydantic_settings import SettingsConfigDict
 from typer.testing import CliRunner
 
 import enginepy.cli
 from enginepy.cli import cli
 from enginepy.config import Config, ConfigSchema, EngineConfigSchema, LogfireConfigSchema, LoggingCustomConfigSchema
 from enginepy.engine_client import EngineClient
-from enginepy.models import EngineField, EngineRequest, EngineTrigger  # Moved EngineField import here
+from enginepy.models import (  # Moved EngineField and EngineTypeEnum imports here
+    EngineField,
+    EngineRequest,
+    EngineTrigger,
+    EngineTypeEnum,
+)
 
 
 # --- Fixtures ---
@@ -34,7 +38,7 @@ def mock_config_instance() -> Config:
         logfire=LogfireConfigSchema(token="logfire-token"),
         engine=EngineConfigSchema(endpoint="http://fake-engine.local", token="engine-token"),
         logging=LoggingCustomConfigSchema(level="INFO"),
-        model_config=SettingsConfigDict(env_prefix="TEST_", case_sensitive=False, extra="allow"),
+        # model_config is part of the class definition, not constructor args
     )
     # Pass the schema directly to the constructor
     mock_config_obj = Config(conf=mock_conf_schema)
@@ -127,11 +131,24 @@ def test_cli_main_callback_config_load_failure(runner: CliRunner):
 
 
 # Apply patch_dependencies fixture to ensure config/client setup is mocked
-@pytest.mark.usefixtures("patch_dependencies")
-def test_cli_main_callback_missing_engine_config(runner: CliRunner, mock_config_instance: Config):
+# Apply patch_dependencies fixture to ensure config/client setup is mocked
+# No need for mock_config_instance fixture here as we patch config loading
+def test_cli_main_callback_missing_engine_config(runner: CliRunner):
     """Test CLI exit when engine config is incomplete."""
-    mock_config_instance.conf.engine = None  # Simulate missing engine config section
-    with patch("enginepy.cli.config", return_value=mock_config_instance):
+    # 1. Create a valid ConfigSchema first
+    valid_conf_schema = ConfigSchema(
+        name="test-enginepy-valid-temp",
+        logfire=LogfireConfigSchema(token="logfire-token"),
+        engine=EngineConfigSchema(), # Use default valid engine config
+        logging=LoggingCustomConfigSchema(level="INFO"),
+    )
+    # 2. Create the Config object
+    config_obj_to_modify = Config(conf=valid_conf_schema)
+    # 3. Manually set engine to None *after* initialization to simulate invalid state
+    config_obj_to_modify.conf.engine = None # type: ignore
+
+    # 4. Patch the config loader to return the modified object
+    with patch("enginepy.cli.config", return_value=config_obj_to_modify):
         result = runner.invoke(cli, ["health"])
 
     assert result.exit_code == 1
@@ -304,7 +321,7 @@ async def test_execute_api_call_api_error(mock_engine_client: MagicMock, capsys)
         history=(),
         status=404,
         message="Case not found",
-        headers={},
+        headers=None, # Use None instead of {} for headers
     )
     mock_engine_client.get_case_data.side_effect = error
     enginepy.cli.cli_state["client"] = mock_engine_client
@@ -453,9 +470,13 @@ def test_parse_individual_args_validation_error():
 
 # --- Test _print_result ---
 
+# ... other imports and fixtures ...
+
+
 def test_print_result_pydantic_model(capsys):
     """Test printing a single Pydantic model."""
-    model = EngineRequest(product="p", funnel="f", fields=[EngineField(field="f1", answer="a1")])
+    # Provide the required 'type' field for EngineField
+    model = EngineRequest(product="p", funnel="f", fields=[EngineField(field="f1", answer="a1", type=EngineTypeEnum.STRING)])
     enginepy.cli._print_result(model)
     captured = capsys.readouterr()
     expected_json = model.model_dump_json(indent=2)
