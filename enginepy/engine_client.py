@@ -116,6 +116,34 @@ class EngineClient(BaseClient):
         resp.raise_for_status()
         return await resp.json()
 
+    async def get_case_data(self, request_id: int) -> dict[str, Any]:
+        """
+        Retrieves case data associated with a specific request ID.
+
+        Args:
+            request_id: The ID of the request for which to retrieve case data.
+
+        Returns:
+            A dictionary containing the case data.
+            Note: Consider defining a specific Pydantic model for this response structure.
+
+        Raises:
+            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+        """
+        path = "/api/case_data"
+        params = {"request_id": request_id}
+        headers = self.headers()  # Default headers are suitable for GET expecting JSON
+        resp = await self.session.get(
+            self._url(path),
+            params=params,
+            headers=headers,
+            ssl=self.ssl_mode,
+            timeout=ClientTimeout(total=30),  # Consistent timeout
+        )
+        await self.log_request(resp)  # Log the request/response details
+        resp.raise_for_status()
+        return await resp.json()
+
     async def health(self) -> Any:
         """
         Checks the health of the engine API.
