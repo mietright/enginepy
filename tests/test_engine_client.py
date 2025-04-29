@@ -2,6 +2,7 @@ import json  # Add json import for data serialization check
 from collections.abc import AsyncIterator
 from datetime import datetime
 from unittest.mock import AsyncMock, call
+from urllib.parse import urlencode  # Import urlencode
 
 import pytest
 import pytest_asyncio
@@ -82,7 +83,7 @@ async def test_health_success(client: EngineClient, test_endpoint: str, test_tok
     with aioresponses() as m:
         m.get(f"{test_endpoint}/_health", payload={"status": "ok"}, status=200)
         response = await client.health()
-        assert response == {"status": "ok"}
+        assert response is True
         expected_timeout = ClientTimeout(total=10)
         # Match the headers exactly as observed in the error output
         expected_headers = {
@@ -117,23 +118,27 @@ async def test_get_case_data_success(
     client: EngineClient, test_endpoint: str, test_token: str, request_id: int, expected_user_agent: str
 ):
     """Tests successful retrieval of case data."""
-    expected_path = f"/api/case_data"
+    expected_path = "/api/case_data"
     expected_url = f"{test_endpoint}{expected_path}"
     # Ensure params match the type expected by aiohttp/aioresponses (usually strings)
     expected_params = {"request_id": str(request_id)}
+    # Ensure params match the type expected by aiohttp/aioresponses (usually int/float/str)
+    expected_params = {"request_id": request_id} # Use int as recorded by aioresponses
     expected_headers = {
         "Accept": "*/*",
         "token": test_token,
         "User-Agent": expected_user_agent,
-        # BaseClient might add default Content-Type even for GET, match if necessary
-        # "Content-Type": "application/json", # Add if observed in actual calls
+        # BaseClient adds default Content-Type even for GET, match the recorded call
+        "Content-Type": "application/json",
     }
     expected_response_payload = {"case_id": request_id, "status": "processing", "details": "some data"}
     expected_timeout = ClientTimeout(total=30) # Match timeout used in client method
+    # Construct the full URL with query parameters for mocking
+    full_expected_url = f"{expected_url}?{urlencode(expected_params)}"
 
     with aioresponses() as m:
-        # Mock the specific URL and method
-        m.get(expected_url, status=200, payload=expected_response_payload) # No need to mock headers in response
+        # Mock the specific URL and method, including query parameters
+        m.get(full_expected_url, status=200, payload=expected_response_payload) # No need to mock headers in response
 
         response = await client.get_case_data(request_id)
 
@@ -149,28 +154,41 @@ async def test_get_case_data_success(
         )
 
 
+# Add missing fixtures (test_token, expected_user_agent) to the failure test signature
 @pytest.mark.asyncio
-async def test_get_case_data_failure(client: EngineClient, test_endpoint: str, request_id: int):
+async def test_get_case_data_failure(
+    client: EngineClient, test_endpoint: str, test_token: str, request_id: int, expected_user_agent: str
+):
     """Tests failure scenario for retrieving case data (e.g., 404 Not Found)."""
-    expected_path = f"/api/case_data"
+    expected_path = "/api/case_data"
     expected_url = f"{test_endpoint}{expected_path}"
-    expected_params = {"request_id": str(request_id)}
+    # Ensure params match the type expected by aiohttp/aioresponses (usually int/float/str)
+    expected_params = {"request_id": request_id} # Use int as recorded by aioresponses
+    expected_headers = { # Define headers to match the actual call for assertion
+        "Accept": "*/*",
+        "token": test_token,
+        "User-Agent": expected_user_agent,
+        "Content-Type": "application/json", # BaseClient adds this
+    }
     expected_timeout = ClientTimeout(total=30) # Match timeout used in client method
+    # Construct the full URL with query parameters for mocking (use str for urlencode)
+    full_expected_url = f"{expected_url}?{urlencode({'request_id': str(request_id)})}"
 
     with aioresponses() as m:
-        # Mock the URL to return a 404 status
-        m.get(expected_url, status=404)
+        # Mock the URL to return a 404 status, including query parameters
+        m.get(full_expected_url, status=404)
 
         with pytest.raises(ClientResponseError) as excinfo:
             await client.get_case_data(request_id)
 
         assert excinfo.value.status == 404
         # Verify the call was made, even though it failed
+        # Note: assert_called_once_with uses the base URL and checks params separately
         m.assert_called_once_with(
-            expected_url,
+            expected_url, # Assert against the base URL
             method="GET",
-            params=expected_params,
-            # Headers check omitted for brevity in failure case, but could be added
+            params=expected_params, # Assert params separately (should be int)
+            headers=expected_headers, # Add headers check
             ssl=False,
             timeout=expected_timeout,
         )

@@ -144,7 +144,7 @@ class EngineClient(BaseClient):
         resp.raise_for_status()
         return await resp.json()
 
-    async def health(self) -> Any:
+    async def health(self) -> bool:
         """
         Checks the health of the engine API.
 
@@ -164,9 +164,9 @@ class EngineClient(BaseClient):
             timeout=ClientTimeout(total=10),  # Shorter timeout for health check
         )
         # Log request without body/params for GET
-        await self.log_request(resp)  # BaseClient.log_request handles response details
+        await self.log_request(resp)
         resp.raise_for_status()
-        return await resp.json()
+        return resp.status == 200
 
     async def action_trigger(self, engine_trigger: EngineTrigger) -> EngineTrigger:
         """
