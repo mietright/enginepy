@@ -12,6 +12,7 @@ from ant31box.client.base import BaseClient
 from enginepy.models import (
     AgentClassifierWorkflowOutput,
     AwsClassifierResult,
+    CaseRawData,
     DocsResponse,
     EngineRequest,
     EngineTrigger,
@@ -116,7 +117,7 @@ class EngineClient(BaseClient):
         resp.raise_for_status()
         return await resp.json()
 
-    async def get_case_data(self, request_id: int) -> dict[str, Any]:
+    async def get_case_data_all(self, request_id: int, with_summary: bool = False) -> dict[str, Any]:
         """
         Retrieves case data associated with a specific request ID.
 
@@ -131,7 +132,7 @@ class EngineClient(BaseClient):
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
         """
         path = "/api/case_data"
-        params = {"request_id": request_id}
+        params = {"request_id": request_id, "with_summary": str(with_summary).lower()}
         headers = self.headers()  # Default headers are suitable for GET expecting JSON
         resp = await self.session.get(
             self._url(path),
@@ -143,6 +144,23 @@ class EngineClient(BaseClient):
         await self.log_request(resp)  # Log the request/response details
         resp.raise_for_status()
         return await resp.json()
+
+    async def get_case_data(self, request_id: int, with_summary: bool = False) -> CaseRawData:
+        """
+        Retrieves case data associated with a specific request ID.
+
+        Args:
+            request_id: The ID of the request for which to retrieve case data.
+
+        Returns:
+            A dictionary containing the case data.
+            Note: Consider defining a specific Pydantic model for this response structure.
+
+        Raises:
+            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+        """
+        res = await self.get_case_data_all(request_id, with_summary)
+        return CaseRawData.model_validate(res)
 
     async def health(self) -> bool:
         """

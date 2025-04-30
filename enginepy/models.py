@@ -333,3 +333,29 @@ class AgentClassifierWorkflowOutput(BaseModel):
     )
     cost: AgentRunCost | None = Field(default=None, description="The cost of the agent workflow run")
     workflow_info: WorkflowInfo | None = Field(default=None, description="The information about the agent workflow run")
+
+
+class CaseRawDataInformation(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    generic: dict[str, Any] | None = Field(default=None, title="Generic")
+    hearing_report: dict[str, Any] | None = Field(default=None, title="Hearing Report")
+    court_result: dict[str, Any] | None = Field(default=None, title="Court Result")
+    rent_index: dict[str, Any] | None = Field(default=None, title="Rent Index")
+    kfa: dict[str, Any] | None = Field(default=None, title="KFA")
+    kfb: dict[str, Any] | None = Field(default=None, title="KFB")
+
+
+class CaseRawData(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    address: dict[str, Any] | None = Field(default=None, title="Address")
+    user: dict[str, Any] | None = Field(default=None, title="User")
+    contact: dict[str, Any] | None = Field(default=None, title="Contact")
+    court_data: list[dict[str, Any]] | dict[str, Any] | None = Field(default=None, title="Court Data")
+    counterparties: list[dict[str, Any]] | None = Field(default=None, title="Counterparties")
+    information: CaseRawDataInformation | None = Field(default=None, title="Information")
+    summary: str | None = Field(default=None, title="Summary")
+    timeline: str | None = Field(default=None, title="Timeline")
