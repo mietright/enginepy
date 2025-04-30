@@ -120,10 +120,14 @@ async def test_get_case_data_success(
     """Tests successful retrieval of case data."""
     expected_path = "/api/case_data"
     expected_url = f"{test_endpoint}{expected_path}"
-    # Ensure params match the type expected by aiohttp/aioresponses (usually strings)
-    expected_params = {"request_id": str(request_id)}
-    # Ensure params match the type expected by aiohttp/aioresponses (usually int/float/str)
-    expected_params = {"request_id": request_id} # Use int as recorded by aioresponses
+    # Ensure params match the type expected by aiohttp/aioresponses
+    # The actual recorded call by aioresponses seems to keep the original type (int for request_id)
+    expected_params_for_assert = {"request_id": request_id, "with_summary": "false"}
+
+    # Use stringified params for URL construction as aiohttp/urlencode expects
+    params_for_url = {"request_id": str(request_id), "with_summary": "false"}
+    full_expected_url = f"{expected_url}?{urlencode(params_for_url)}"
+
     expected_headers = {
         "Accept": "*/*",
         "token": test_token,
@@ -131,24 +135,22 @@ async def test_get_case_data_success(
         # BaseClient adds default Content-Type even for GET, match the recorded call
         "Content-Type": "application/json",
     }
-    expected_response_payload = {"case_id": request_id, "status": "processing", "details": "some data"}
+    expected_response_payload = {"user": {"email": "toto"}}
     expected_timeout = ClientTimeout(total=30) # Match timeout used in client method
-    # Construct the full URL with query parameters for mocking
-    full_expected_url = f"{expected_url}?{urlencode(expected_params)}"
 
     with aioresponses() as m:
         # Mock the specific URL and method, including query parameters
-        m.get(full_expected_url, status=200, payload=expected_response_payload) # No need to mock headers in response
+        m.get(full_expected_url, status=200, payload=expected_response_payload)
 
-        response = await client.get_case_data(request_id)
+        response = await client.get_case_data(request_id, with_summary=False)
 
-        assert response == expected_response_payload
-        # Verify the call details precisely
+        assert response.model_dump(exclude_none=True, exclude_unset=True) == expected_response_payload
+        # Verify the call details precisely, using the params types recorded by aioresponses
         m.assert_called_once_with(
-            expected_url,
+            expected_url, # Pass the base URL here, aioresponses handles params matching separately
             method="GET",
             headers=expected_headers,
-            params=expected_params,
+            params=expected_params_for_assert, # Use the dictionary with the integer request_id
             ssl=False,  # Based on client initialization
             timeout=expected_timeout,
         )
@@ -163,7 +165,7 @@ async def test_get_case_data_failure(
     expected_path = "/api/case_data"
     expected_url = f"{test_endpoint}{expected_path}"
     # Ensure params match the type expected by aiohttp/aioresponses (usually int/float/str)
-    expected_params = {"request_id": request_id} # Use int as recorded by aioresponses
+    expected_params = {"request_id": request_id, "with_summary": "false"} # Use int as recorded by aioresponses
     expected_headers = { # Define headers to match the actual call for assertion
         "Accept": "*/*",
         "token": test_token,
@@ -172,7 +174,7 @@ async def test_get_case_data_failure(
     }
     expected_timeout = ClientTimeout(total=30) # Match timeout used in client method
     # Construct the full URL with query parameters for mocking (use str for urlencode)
-    full_expected_url = f"{expected_url}?{urlencode({'request_id': str(request_id)})}"
+    full_expected_url = f"{expected_url}?{urlencode(expected_params)}"
 
     with aioresponses() as m:
         # Mock the URL to return a 404 status, including query parameters
