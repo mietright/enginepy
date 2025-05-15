@@ -42,7 +42,7 @@ class ConfigSchema(ant31box.config.ConfigSchema):
     engine: EngineConfigSchema = Field(default_factory=EngineConfigSchema)
 
 
-class Config(ant31box.config.Config[ConfigSchema]):
+class Config(ant31box.config.GenericConfig[ConfigSchema]):
     _env_prefix = ENVPREFIX
     __config_class__ = ConfigSchema
 

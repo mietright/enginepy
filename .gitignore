@@ -81,4 +81,3 @@ target/
 .watchmanconfig
 .aider*
 !.aider/
-!.aider.conf.yml

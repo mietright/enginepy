@@ -5,7 +5,7 @@ description = ""
 authors = [{email="2t.antoine@gmail.com", name="ant31"}]
 readme = "README.md"
 packages = [{ include = "enginepy" }]
-requires-python = ">=3.11,<4"
+requires-python = ">=3.12,<4"
 dependencies = [
              "asyncio (>=3)",
              "pydantic",
