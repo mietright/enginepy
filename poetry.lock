@@ -235,7 +235,7 @@ files = [
 
 [[package]]
 name = "ant31box"
-version = "0.2.3"
+version = "0.2.4"
 description = ""
 optional = false
 python-versions = ">=3.12,<4"
@@ -262,13 +262,13 @@ typing-extensions = "*"
 click = ["click"]
 fastapi = ["fastapi[all]", "starlette-exporter"]
 s3 = ["boto3"]
-sentry = []
+sentry = ["sentry-sdk[fastapi]"]
 
 [package.source]
 type = "git"
 url = "https://github.com/ant31/ant31box"
 reference = "main"
-resolved_reference = "6c977b707e777efb6987da9f8398a001f1f5f095"
+resolved_reference = "e6d4c51bfc5b8512d3f6aa87755cd6bbeee87877"
 
 [[package]]
 name = "anyio"
