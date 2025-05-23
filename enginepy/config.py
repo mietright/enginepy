@@ -31,10 +31,23 @@ class LogfireConfigSchema(BaseConfig):
     token: str = Field(default="")
 
 
+class EngineTokensConfigSchema(BaseConfig):
+    admin: str = Field(default="")
+    zieb: str = Field(default="")
+    creator: str = Field(default="")
+    concierge: str = Field(default="")
+    mail_processor: str = Field(default="")
+    frontend: str = Field(default="")
+    dca: str = Field(default="")
+    docx: str = Field(default="")
+    accounting: str = Field(default="")
+    bea: str = Field(default="")
+
+
 class EngineConfigSchema(BaseConfig):
     token: str = Field(default="changeme")
     endpoint: str = Field(default="https://engine.stg.conny.dev")
-    tokens: dict[str, str] = Field(default={})
+    tokens: EngineTokensConfigSchema = Field(default_factory=EngineTokensConfigSchema)
 
 
 ENVPREFIX = "ENGINEPY"
