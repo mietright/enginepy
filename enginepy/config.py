@@ -34,6 +34,7 @@ class LogfireConfigSchema(BaseConfig):
 class EngineConfigSchema(BaseConfig):
     token: str = Field(default="changeme")
     endpoint: str = Field(default="https://engine.stg.conny.dev")
+    tokens: dict[str, str] = Field(default={})
 
 
 ENVPREFIX = "ENGINEPY"
