@@ -366,7 +366,7 @@ class EngineClient(BaseClient):
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
         """
         url = self._url("/api/scheduled_call_response")
-        data_dict = telli_event.model_dump(exclude_none=True, exclude_unset=True)
+        data_dict = json.loads(telli_event.model_dump_json(exclude_none=True, exclude_unset=True))
         request_headers = self.headers()  # Default content_type is 'json'
 
         resp = await self.session.post(
