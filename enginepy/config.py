@@ -8,14 +8,16 @@ from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
 LOGGING_CONFIG: dict[str, Any] = ant31box.config.LOGGING_CONFIG
-LOGGING_CONFIG["handlers"].update({
+LOGGING_CONFIG["handlers"].update(
+    {
         "default": {
             "formatter": "default",
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stderr",
             "level": "INFO",
         },
-    })
+    }
+)
 LOGGING_CONFIG["loggers"].update({"root": {"handlers": ["default"], "level": "DEBUG", "propagate": True}})
 
 logger: logging.Logger = logging.getLogger("enginepy")

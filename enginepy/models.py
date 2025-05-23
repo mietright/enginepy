@@ -352,7 +352,7 @@ class SummaryModel(BaseModel):
         extra="allow",
     )
     timeline: str = Field(default="", title="Timeline")
-    summary: str  = Field(default="", title="Summary")
+    summary: str = Field(default="", title="Summary")
     summary_changes: list[str] | None = Field(default=None, title="Summary Changes")
     timeline_changes: list[str] | None = Field(default=None, title="Timeline Changes")
 
@@ -364,12 +364,14 @@ class SummaryResponse(SummaryModel):
     last_document_id: str | None = Field(default=None, title="Last Document Id")
     last_document_date: str | None = Field(default=None, title="Last Document Date")
 
+
 class Summary(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
     summary_type: str = Field(..., title="Summary Type")
     payload: SummaryResponse = Field(..., title="Payload")
+
 
 class CaseRawData(BaseModel):
     model_config = ConfigDict(
