@@ -301,10 +301,8 @@ class EngineClient(BaseClient):
         """
         path = "/api/admin/data_source"
         # Prepare payload as a dictionary for form data
-        payload = enginereq.model_dump(exclude_none=True, exclude_unset=True)
-        # Handle nested JSON field specifically
-        if "fields" in payload and isinstance(payload["fields"], dict | list):
-            payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
+        payload = enginereq.model_dump()
+        payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = request_id  # Set the request_id for update
 
         request_headers = self.headers("form")
