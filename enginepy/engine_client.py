@@ -17,6 +17,7 @@ from enginepy.models import (
     EngineRequest,
     EngineTrigger,
 )
+from enginepy.telli.models import TelliWebhook
 
 logger = logging.getLogger(__name__)
 
@@ -37,15 +38,15 @@ class EngineClient(BaseClient):
         content_type: Literal["json", "form"] | str | None = "json",
         extra: dict[str, str] | None = None,
     ) -> dict[str, str]:
-        headers = {
+        headers_dict = {
             "Accept": "*/*",
             "token": self.token,
         }
 
         if extra is not None:
-            headers.update(extra)
+            headers_dict.update(extra)
         # Ensure the base headers (like User-Agent) are included
-        return super().headers(content_type=content_type, extra=headers)
+        return super().headers(content_type=content_type, extra=headers_dict)
 
     async def update_doc(self, doc_id: int, ocr_pages: list[str], searchable_pdf: str = "") -> bool:
         """
@@ -68,13 +69,13 @@ class EngineClient(BaseClient):
             "ocr": ocr_pages,
             "searchable_pdf_url": searchable_pdf,
         }
-        headers = self.headers()
+        request_headers = self.headers()
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
             params={},  # Keep params if needed, otherwise remove
             json=data,  # Use json parameter for automatic serialization and content-type
-            headers=headers,
+            headers=request_headers,
             ssl=self.ssl_mode,
             timeout=ClientTimeout(total=30),
         )
@@ -103,13 +104,13 @@ class EngineClient(BaseClient):
         # Use model_dump for the dictionary, pass it to the json parameter
         data_dict = updates.model_dump(exclude_none=True, exclude_unset=True)
 
-        headers = self.headers()
+        request_headers = self.headers()
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
             params={},  # Keep params if needed, otherwise remove
             json=data_dict,  # Use json parameter with the dictionary
-            headers=headers,
+            headers=request_headers,
             ssl=self.ssl_mode,
             timeout=ClientTimeout(total=30),
         )
@@ -123,6 +124,7 @@ class EngineClient(BaseClient):
 
         Args:
             request_id: The ID of the request for which to retrieve case data.
+            with_summary: Flag to indicate if summary should be included.
 
         Returns:
             A dictionary containing the case data.
@@ -133,11 +135,11 @@ class EngineClient(BaseClient):
         """
         path = "/api/case_data"
         params = {"request_id": request_id, "with_summary": str(with_summary).lower()}
-        headers = self.headers()  # Default headers are suitable for GET expecting JSON
+        request_headers = self.headers()  # Default headers are suitable for GET expecting JSON
         resp = await self.session.get(
             self._url(path),
             params=params,
-            headers=headers,
+            headers=request_headers,
             ssl=self.ssl_mode,
             timeout=ClientTimeout(total=30),  # Consistent timeout
         )
@@ -147,17 +149,18 @@ class EngineClient(BaseClient):
 
     async def get_case_data(self, request_id: int, with_summary: bool = False) -> CaseRawData:
         """
-        Retrieves case data associated with a specific request ID.
+        Retrieves case data associated with a specific request ID and validates into CaseRawData.
 
         Args:
             request_id: The ID of the request for which to retrieve case data.
+            with_summary: Flag to indicate if summary should be included.
 
         Returns:
-            A dictionary containing the case data.
-            Note: Consider defining a specific Pydantic model for this response structure.
+            A CaseRawData object containing the validated case data.
 
         Raises:
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            pydantic.ValidationError: If the response data fails validation against CaseRawData.
         """
         res = await self.get_case_data_all(request_id, with_summary)
         return CaseRawData.model_validate(res)
@@ -167,17 +170,16 @@ class EngineClient(BaseClient):
         Checks the health of the engine API.
 
         Returns:
-            The JSON response from the health endpoint, typically a dictionary indicating status.
-            Note: Consider defining a specific Pydantic model for this response.
+            True if the health endpoint returns a 200 status, False otherwise.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx) other than 200.
         """
         path: str = "/_health"
-        headers = self.headers()
+        request_headers = self.headers()
         resp = await self.session.get(
             self._url(path),
-            headers=headers,
+            headers=request_headers,
             ssl=self.ssl_mode,
             timeout=ClientTimeout(total=10),  # Shorter timeout for health check
         )
@@ -204,11 +206,11 @@ class EngineClient(BaseClient):
         path = f"/api/admin/action_triggers/{engine_trigger.trigger_id}"
         # Params should include query parameters
         params = engine_trigger.model_dump(include={"request_id", "client", "attempt"}, exclude_none=True)
-        headers = self.headers("form")  # Original used form content type
+        request_headers = self.headers("form")  # Original used form content type
         resp = await self.session.put(
             self._url(path),
             params=params,
-            headers=headers,
+            headers=request_headers,
             ssl=self.ssl_mode,
             timeout=ClientTimeout(total=30),
             # No body for this specific PUT in the original code
@@ -234,9 +236,6 @@ class EngineClient(BaseClient):
             aiohttp.ClientResponseError: If any of the underlying `action_trigger` calls fail.
             Exception: If `asyncio.gather` encounters other errors.
         """
-        # Note: The original implementation might have intended to pass request_id etc.
-        # in the body or params of the PUT request within action_trigger.
-        # The current implementation matches the provided aio.py structure.
         tasks = [
             self.action_trigger(
                 EngineTrigger(
@@ -273,10 +272,10 @@ class EngineClient(BaseClient):
             payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = None  # Explicitly set to None for creation
 
-        headers = self.headers("form")
+        request_headers = self.headers("form")
         resp = await self.session.post(
             self._url(path),
-            headers=headers,
+            headers=request_headers,
             ssl=self.ssl_mode,
             data=payload,  # Use data for form encoding
             timeout=ClientTimeout(total=30),
@@ -308,10 +307,10 @@ class EngineClient(BaseClient):
             payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = request_id  # Set the request_id for update
 
-        headers = self.headers("form")
+        request_headers = self.headers("form")
         resp = await self.session.put(
             self._url(path),
-            headers=headers,
+            headers=request_headers,
             ssl=self.ssl_mode,
             data=payload,  # Use data for form encoding
             params={},  # Original had empty params for PUT
@@ -338,13 +337,42 @@ class EngineClient(BaseClient):
         url = self._url("/api/insights")
         # Use model_dump for the dictionary, pass it to the json parameter
         data_dict = docs.model_dump(exclude_none=True, exclude_unset=True)
-        headers = self.headers()
+        request_headers = self.headers()
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
             params={},  # Keep params if needed, otherwise remove
             json=data_dict,  # Use json parameter with the dictionary
-            headers=headers,
+            headers=request_headers,
+            ssl=self.ssl_mode,
+            timeout=ClientTimeout(total=30),
+        )
+        await self.log_request(resp)
+        resp.raise_for_status()
+        return await resp.json()
+
+    async def scheduled_call_response(self, telli_event: TelliWebhook) -> dict[str, Any]:
+        """
+        Sends a Telli webhook event for a scheduled call to the engine.
+
+        Args:
+            telli_event: A TelliWebhook object containing the event details.
+
+        Returns:
+            A dictionary containing the API response.
+            Note: Consider defining a specific Pydantic model for this response.
+
+        Raises:
+            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+        """
+        url = self._url("/api/scheduled_call_response")
+        data_dict = telli_event.model_dump(exclude_none=True, exclude_unset=True)
+        request_headers = self.headers()  # Default content_type is 'json'
+
+        resp = await self.session.post(
+            url,
+            json=data_dict,
+            headers=request_headers,
             ssl=self.ssl_mode,
             timeout=ClientTimeout(total=30),
         )
