@@ -347,6 +347,30 @@ class CaseRawDataInformation(BaseModel):
     kfb: dict[str, Any] | None = Field(default=None, title="KFB")
 
 
+class SummaryModel(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    timeline: str = Field(default="", title="Timeline")
+    summary: str  = Field(default="", title="Summary")
+    summary_changes: list[str] | None = Field(default=None, title="Summary Changes")
+    timeline_changes: list[str] | None = Field(default=None, title="Timeline Changes")
+
+
+class SummaryResponse(SummaryModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    last_document_id: str | None = Field(default=None, title="Last Document Id")
+    last_document_date: str | None = Field(default=None, title="Last Document Date")
+
+class Summary(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    summary_type: str = Field(..., title="Summary Type")
+    payload: SummaryResponse = Field(..., title="Payload")
+
 class CaseRawData(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -357,5 +381,4 @@ class CaseRawData(BaseModel):
     court_data: list[dict[str, Any]] | dict[str, Any] | None = Field(default=None, title="Court Data")
     counterparties: list[dict[str, Any]] | None = Field(default=None, title="Counterparties")
     information: CaseRawDataInformation | None = Field(default=None, title="Information")
-    summary: str | None = Field(default=None, title="Summary")
-    timeline: str | None = Field(default=None, title="Timeline")
+    summaries: list[Summary] | None = Field(default=None, title="Summaries")
