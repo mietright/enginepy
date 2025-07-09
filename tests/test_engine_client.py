@@ -1,7 +1,7 @@
 import json  # Add json import for data serialization check
 from collections.abc import AsyncIterator
 from datetime import datetime
-from unittest.mock import AsyncMock, call
+from unittest.mock import AsyncMock, MagicMock, call
 from urllib.parse import urlencode  # Import urlencode
 
 import pytest
@@ -29,6 +29,7 @@ from enginepy.models import (
     OutputFormatEnum,
     WithContentMode,
 )
+from enginepy.telli.models import TelliWebhook
 
 
 @pytest.fixture
@@ -75,6 +76,27 @@ async def client(test_endpoint: str, test_token: str) -> AsyncIterator[EngineCli
     yield instance
     # Clean up the client session after tests if necessary
     await instance.session.close()
+
+
+@pytest.mark.asyncio
+async def test_set_token(client: EngineClient, test_token: str):
+    """Test that set_token updates the client's token."""
+    assert client.token == test_token
+    new_token = "a-different-token"
+    client.set_token(new_token)
+    assert client.token == new_token
+
+
+@pytest.mark.asyncio
+async def test_headers_with_extra(client: EngineClient, test_token: str, expected_user_agent: str):
+    """Test that the headers method includes extra headers."""
+    extra_headers = {"X-Custom-Header": "CustomValue"}
+    headers = client.headers(extra=extra_headers)
+
+    assert headers["X-Custom-Header"] == "CustomValue"
+    assert headers["token"] == test_token
+    assert headers["User-Agent"] == expected_user_agent
+    assert headers["Accept"] == "*/*"
 
 
 @pytest.mark.asyncio
@@ -565,6 +587,56 @@ async def test_action_triggers_success(client: EngineClient, request_id: int):
 
     # Verify the results returned by action_triggers match the mocked return values
     assert results == [mock_return1, mock_return2, mock_return3]
+
+
+@pytest.mark.asyncio
+async def test_scheduled_call_response_success(client: EngineClient, test_endpoint: str, test_token: str, expected_user_agent: str):
+    """Test successful scheduled call response."""
+    # We mock TelliWebhook since we don't need a real instance with data for this test.
+    mock_event = MagicMock(spec=TelliWebhook)
+    # The client method does a json.loads(model_dump_json(...)), so we mock the string output.
+    mock_event.model_dump_json.return_value = '{"event": "call_answered", "call_sid": "C123"}'
+
+    expected_payload = {"event": "call_answered", "call_sid": "C123"}
+    response_payload = {"status": "ok"}
+    expected_url = f"{test_endpoint}/api/scheduled_call_response"
+
+    with aioresponses() as m:
+        m.post(expected_url, status=200, payload=response_payload)
+        response = await client.scheduled_call_response(mock_event)
+
+        assert response == response_payload
+        mock_event.model_dump_json.assert_called_once_with(exclude_none=True, exclude_unset=True)
+
+        expected_timeout = ClientTimeout(total=30)
+        expected_headers = {
+            "Accept": "*/*",
+            "token": test_token,
+            "Content-Type": "application/json",
+            "User-Agent": expected_user_agent,
+        }
+        m.assert_called_once_with(
+            expected_url,
+            method="POST",
+            json=expected_payload,
+            headers=expected_headers,
+            ssl=False,
+            timeout=expected_timeout,
+        )
+
+
+@pytest.mark.asyncio
+async def test_scheduled_call_response_failure(client: EngineClient, test_endpoint: str):
+    """Test failed scheduled call response."""
+    mock_event = MagicMock(spec=TelliWebhook)
+    mock_event.model_dump_json.return_value = '{"event": "call_failed"}'
+    expected_url = f"{test_endpoint}/api/scheduled_call_response"
+
+    with aioresponses() as m:
+        m.post(expected_url, status=400)
+        with pytest.raises(ClientResponseError) as exc_info:
+            await client.scheduled_call_response(mock_event)
+        assert exc_info.value.status == 400
 
 
 # TODO: Add tests verifying specific header content (e.g., token, content-type) more explicitly if needed.

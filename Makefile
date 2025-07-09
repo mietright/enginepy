@@ -125,3 +125,10 @@ docker-push: docker-build
 
 docker-build:
 	docker build --network=host -t img.conny.dev/conny/enginepy:latest .
+
+BUMP ?= patch
+bump:
+	uv run bump-my-version bump $(BUMP)
+
+upgrade-dep:
+	uv lock -U --resolution=highest

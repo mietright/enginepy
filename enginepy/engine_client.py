@@ -118,7 +118,9 @@ class EngineClient(BaseClient):
         resp.raise_for_status()
         return await resp.json()
 
-    async def get_case_data_all(self, request_id: int, with_summary: bool = False) -> dict[str, Any]:
+    async def get_case_data_all(
+        self, request_id: int, with_summary: bool = False, with_wwm: bool = True
+    ) -> dict[str, Any]:
         """
         Retrieves case data associated with a specific request ID.
 
@@ -134,7 +136,11 @@ class EngineClient(BaseClient):
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
         """
         path = "/api/case_data"
-        params = {"request_id": request_id, "with_summary": str(with_summary).lower()}
+        params = {
+            "request_id": request_id,
+            "with_summary": str(with_summary).lower(),
+            "with_wwm": str(with_wwm).lower(),
+        }
         request_headers = self.headers()  # Default headers are suitable for GET expecting JSON
         resp = await self.session.get(
             self._url(path),
