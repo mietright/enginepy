@@ -125,8 +125,8 @@ def test_cli_main_callback_config_load_failure(runner: CliRunner):
         result = runner.invoke(cli, ["health"])
 
     assert result.exit_code == 1
-    assert "Failed to initialize configuration or client" in result.stdout
-    assert "Config file not found" in result.stdout
+    assert "Failed to initialize configuration or client" in result.stderr
+    assert "Config file not found" in result.stderr
     assert mock_load_config.called
 
 
@@ -152,7 +152,7 @@ def test_cli_main_callback_missing_engine_config(runner: CliRunner):
         result = runner.invoke(cli, ["health"])
 
     assert result.exit_code == 1
-    assert "Engine endpoint and token must be configured." in result.stdout
+    assert "Engine endpoint and token must be configured." in result.stderr
 
 
 # --- Test Command Invocation ---
@@ -231,9 +231,9 @@ def test_cli_command_missing_required_arg_option(runner: CliRunner, mock_engine_
     # Check exit code and error message (Typer exits 2 for usage errors like missing options)
     assert result.exit_code == 2
     # Check that the core error message parts are present, handling potential line breaks in Typer's output
-    assert "requires arguments" in result.stdout
-    assert "provided via -i/--input" in result.stdout # Check the part after the potential line break
-    assert "Required: request_id" in result.stdout # Also check that the required arg is mentioned
+    assert "requires arguments" in result.stderr
+    assert "provided via -i/--input" in result.stderr # Check the part after the potential line break
+    assert "Required: request_id" in result.stderr # Also check that the required arg is mentioned
     assert mock_execute_partially.called # Ensure the patched function was entered
 
 

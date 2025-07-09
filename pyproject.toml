@@ -2,51 +2,52 @@
 name = "enginepy"
 version = "0.1.0"
 description = ""
-authors = [{email="2t.antoine@gmail.com", name="ant31"}]
-readme = "README.md"
-packages = [{ include = "enginepy" }]
+authors = [{ name = "ant31", email = "2t.antoine@gmail.com" }]
 requires-python = ">=3.12,<4"
+readme = "README.md"
 dependencies = [
-             "asyncio (>=3)",
-             "pydantic",
-             # "click", # Removed click
-             "typer[all]", # Added typer
-             "pyyaml",
-             "sentry-sdk[fastapi]",
-             "typing-extensions",
-             "ant31box @ git+https://github.com/ant31/ant31box@main",
-             "aiohttp",
-             "aiohttp-prometheus-exporter",
-             "logfire[aiohttp] (>=3.10.0,<4.0.0)",
-             "pyyaml (>=6.0,<7.0.0)"
-                          ]
+    "asyncio (>=3)",
+    "pydantic",
+    "typer[all]",
+    "pyyaml",
+    "sentry-sdk[fastapi]",
+    "typing-extensions",
+    "ant31box @ git+https://github.com/ant31/ant31box@main",
+    "aiohttp",
+    "aiohttp-prometheus-exporter",
+    "logfire[aiohttp] (>=3.10.0,<4.0.0)",
+    "pyyaml (>=6.0,<7.0.0)",
+]
+packages = [{ include = "enginepy" }]
 
-# Add script entry point
 [project.scripts]
 enginepy = "enginepy.cli:cli"
 
+[dependency-groups]
+dev = [
+    "aioresponses",
+    "pyreadline",
+    "pylint-pydantic",
+    "requests",
+    "black",
+    "pylint",
+    "types-requests",
+    "isort",
+    "pytest",
+    "pytest-mock",
+    "coverage",
+    "pytest-cov",
+    "pytest-ordering",
+    "pytest-asyncio",
+    "pyright",
+    "pytest-aioresponses",
+    "ruff",
+    "ipython>=8.0.0,<9",
+]
 
-[tool.poetry.group.dev.dependencies]
-aioresponses = "*"
-pyreadline = "*"
-pylint-pydantic = "*"
-requests = "*"
-black = "*"
-pylint = "*"
-# pyre-check = "*"
-types-requests = "*"
-isort = "*"
-pytest = "*"
-pytest-mock = "*"
-coverage = "*"
-pytest-cov = "*"
-pytest-ordering = "*"
-pytest-asyncio = "*"
-pyright = "*"
-pytest-aioresponses = "*"
-ruff = "*"
-
-ipython = "^8.0.0"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 120
@@ -59,9 +60,8 @@ profile = "black"
 line_length = 120
 skip_gitignore = true
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.pytest]
 testpaths = "tests/"
+
+[tool.hatch.metadata]
+allow-direct-references = true

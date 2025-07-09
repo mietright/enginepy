@@ -122,10 +122,10 @@ async def test_get_case_data_success(
     expected_url = f"{test_endpoint}{expected_path}"
     # Ensure params match the type expected by aiohttp/aioresponses
     # The actual recorded call by aioresponses seems to keep the original type (int for request_id)
-    expected_params_for_assert = {"request_id": request_id, "with_summary": "false"}
+    expected_params_for_assert = {"request_id": request_id, "with_summary": "false", "with_wwm": "true"}
 
     # Use stringified params for URL construction as aiohttp/urlencode expects
-    params_for_url = {"request_id": str(request_id), "with_summary": "false"}
+    params_for_url = {"request_id": str(request_id), "with_summary": "false", "with_wwm": "true"}
     full_expected_url = f"{expected_url}?{urlencode(params_for_url)}"
 
     expected_headers = {
@@ -165,7 +165,7 @@ async def test_get_case_data_failure(
     expected_path = "/api/case_data"
     expected_url = f"{test_endpoint}{expected_path}"
     # Ensure params match the type expected by aiohttp/aioresponses (usually int/float/str)
-    expected_params = {"request_id": request_id, "with_summary": "false"} # Use int as recorded by aioresponses
+    expected_params = {"request_id": request_id, "with_summary": "false", "with_wwm": "true"} # Use int as recorded by aioresponses
     expected_headers = { # Define headers to match the actual call for assertion
         "Accept": "*/*",
         "token": test_token,
@@ -267,7 +267,6 @@ async def test_action_trigger_success(client: EngineClient, test_endpoint: str, 
     # url_pattern = re.compile(f"^{test_endpoint}/api/admin/action_triggers/{trigger_id}(\\?.*)?$")
     expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
     # Construct the full URL with query parameters for mocking
-    from urllib.parse import urlencode
     full_expected_url = f"{expected_url}?{urlencode(expected_params)}"
 
 
@@ -305,7 +304,6 @@ async def test_action_trigger_failure(client: EngineClient, test_endpoint: str, 
     # Define expected params based on trigger defaults to match the actual client call
     expected_params = {"request_id": str(request_id), "client": "enginepy", "attempt": "1"}
     # Construct the full URL with query parameters for mocking
-    from urllib.parse import urlencode
     full_expected_url = f"{expected_url}?{urlencode(expected_params)}"
 
 
@@ -371,6 +369,8 @@ async def test_update_request_success(client: EngineClient, test_endpoint: str, 
         "funnel": "funnel_b_updated",
         "fields": json.dumps([{"field": "field1", "answer": "value1_updated", "type": "string"}], sort_keys=True, default=str),
         "request_id": request_id, # Set for update in client code
+        "documents": "[]",
+        "documents_presign": False,
     }
     response_payload = {"status": "updated"}
     expected_url = f"{test_endpoint}/api/admin/data_source"
