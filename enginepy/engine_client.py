@@ -153,7 +153,7 @@ class EngineClient(BaseClient):
         resp.raise_for_status()
         return await resp.json()
 
-    async def get_case_data(self, request_id: int, with_summary: bool = False) -> CaseRawData:
+    async def get_case_data(self, request_id: int, with_summary: bool = False, with_wwm: bool = True) -> CaseRawData:
         """
         Retrieves case data associated with a specific request ID and validates into CaseRawData.
 
@@ -168,7 +168,7 @@ class EngineClient(BaseClient):
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
             pydantic.ValidationError: If the response data fails validation against CaseRawData.
         """
-        res = await self.get_case_data_all(request_id, with_summary)
+        res = await self.get_case_data_all(request_id, with_summary, with_wwm)
         return CaseRawData.model_validate(res)
 
     async def health(self) -> bool:

@@ -8,6 +8,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic.functional_validators import model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -373,6 +374,26 @@ class Summary(BaseModel):
     payload: SummaryResponse = Field(..., title="Payload")
 
 
+class RelationToolAttribute(BaseModel):
+    name: str = Field(..., description="Name of the attribute")
+    is_positive: bool | None = Field(
+        default=None,
+        description="Whether the attribute is considered a positive aspect (True) or a negative aspect (False)",
+    )
+    description: str = Field("", description="Description of the attribute")
+    contested: bool = Field(default=True, description="Whether the attribute is contested (True) or not (False)")
+    value: str | bool | int | float | None = Field(default=None, description="Value of the attribute")
+    metadata: dict[str, str] = Field(default_factory=dict, description="Metadata for the attribute")
+
+    @model_validator(mode="before")
+    def validate_attribute(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if "is_positive" in values and not isinstance(values["is_positive"], bool):
+            values["is_positive"] = None
+        if "contested" in values and not isinstance(values["contested"], bool):
+            values["contested"] = True
+        return values
+
+
 class CaseRawData(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -384,3 +405,7 @@ class CaseRawData(BaseModel):
     counterparties: list[dict[str, Any]] | None = Field(default=None, title="Counterparties")
     information: CaseRawDataInformation | None = Field(default=None, title="Information")
     summaries: list[Summary] | None = Field(default=None, title="Summaries")
+    attributes: dict[str, list[RelationToolAttribute]] = Field(
+        default_factory=dict,
+        description="Dictionary of attributes with categories as keys and lists of attributes as values",
+    )
