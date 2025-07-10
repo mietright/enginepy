@@ -375,7 +375,9 @@ class Summary(BaseModel):
 
 
 class RelationToolAttribute(BaseModel):
-    name: str = Field(..., description="Name of the attribute")
+    model_config = ConfigDict(
+        extra="ignore",
+    )
     is_positive: bool | None = Field(
         default=None,
         description="Whether the attribute is considered a positive aspect (True) or a negative aspect (False)",
@@ -384,6 +386,7 @@ class RelationToolAttribute(BaseModel):
     contested: bool = Field(default=True, description="Whether the attribute is contested (True) or not (False)")
     value: str | bool | int | float | None = Field(default=None, description="Value of the attribute")
     metadata: dict[str, str] = Field(default_factory=dict, description="Metadata for the attribute")
+    name: str = Field(..., description="Name of the attribute")
 
     @model_validator(mode="before")
     def validate_attribute(cls, values: dict[str, Any]) -> dict[str, Any]:
@@ -409,3 +412,17 @@ class CaseRawData(BaseModel):
         default_factory=dict,
         description="Dictionary of attributes with categories as keys and lists of attributes as values",
     )
+
+    @model_validator(mode="before")
+    def validate_attribute(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if "attributes" in values and isinstance(values["attributes"], dict):
+            cats = {}
+            for category, attributes in values["attributes"].items():
+                att_list = []
+                for attr_name, attr_value in attributes.items():
+                    if "name" not in attr_value:
+                        attr_value["name"] = attr_name
+                    att_list.append(attr_value)
+                cats[category] = att_list
+            values["attributes"] = cats
+        return values
