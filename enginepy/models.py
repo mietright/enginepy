@@ -418,11 +418,14 @@ class CaseRawData(BaseModel):
         if "attributes" in values and isinstance(values["attributes"], dict):
             cats = {}
             for category, attributes in values["attributes"].items():
-                att_list = []
-                for attr_name, attr_value in attributes.items():
-                    if "name" not in attr_value:
-                        attr_value["name"] = attr_name
-                    att_list.append(attr_value)
-                cats[category] = att_list
+                if isinstance(attributes, dict):
+                    att_list = []
+                    for attr_name, attr_value in attributes.items():
+                        if "name" not in attr_value:
+                            attr_value["name"] = attr_name
+                        att_list.append(attr_value)
+                    cats[category] = att_list
+                else:
+                    cats[category] = attributes
             values["attributes"] = cats
         return values
