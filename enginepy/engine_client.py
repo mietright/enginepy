@@ -13,7 +13,6 @@ from enginepy.config import EngineConfigSchema
 from enginepy.gen.cagents import SummaryResponseOutput
 from enginepy.models import (
     AgentClassifierWorkflowOutput,
-    ApiEndpoint,
     AwsClassifierResult,
     CaseRawData,
     DocsResponse,
@@ -75,7 +74,7 @@ class EngineClient(BaseClient):
         """Gets the token preferences attached to a method."""
         method = getattr(self, method_name, None)
         if method and hasattr(method, "_api_endpoint_info"):
-            return getattr(method, "_api_endpoint_info")
+            return method._api_endpoint_info
         return []
 
     def headers(
