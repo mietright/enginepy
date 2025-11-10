@@ -124,7 +124,7 @@ def test_cli_main_callback_success(runner: CliRunner, mock_config_instance: Conf
 def test_cli_main_callback_config_load_failure(runner: CliRunner):
     """Test CLI exit when config loading fails."""
     with patch("enginepy.cli.config", side_effect=FileNotFoundError("Config file not found")) as mock_load_config:
-        result = runner.invoke(cli, ["health"])
+        result = runner.invoke(cli, ["call", "health"])
 
     assert result.exit_code == 1
     assert "Failed to initialize configuration or client" in result.stderr
