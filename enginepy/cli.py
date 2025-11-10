@@ -40,11 +40,13 @@ def _parse_json_value(param_name: str, value_str: str) -> Any:
 
 def _validate_list_type(param_name: str, args_type: tuple[Any, ...], data: list[Any]) -> list[Any]:
     """Validates specific list types (e.g., list[str], list[dict[str, str]])."""
-    if args_type == (str,):
+    item_type = args_type[0]
+
+    if item_type is str:
         if not all(isinstance(item, str) for item in data):
             raise TypeError(f"Expected a list of strings for '{param_name}'.")
         return data
-    if args_type == (dict[str, str],):
+    if item_type == dict[str, str]:
         if not all(
             isinstance(item, dict)
             and all(isinstance(k, str) for k in item)
@@ -53,6 +55,10 @@ def _validate_list_type(param_name: str, args_type: tuple[Any, ...], data: list[
         ):
             raise TypeError(f"Expected a list of dicts with string keys/values for '{param_name}'.")
         return data
+    # Handle lists of Pydantic models
+    if isinstance(item_type, type) and issubclass(item_type, pydantic.BaseModel):
+        return [item_type.model_validate(item) for item in data]
+
     # Add more list types if needed
     raise TypeError(f"Unsupported list item type {args_type} for '{param_name}'.")
 
