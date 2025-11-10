@@ -13,6 +13,7 @@ from enginepy.config import EngineConfigSchema
 from enginepy.gen.cagents import SummaryResponseOutput
 from enginepy.models import (
     AgentClassifierWorkflowOutput,
+    ApiEndpoint,
     AwsClassifierResult,
     CaseRawData,
     DocsResponse,
@@ -61,10 +62,21 @@ class EngineClient(BaseClient):
         """
         if token_prefs:
             for token_name in token_prefs:
+                # getattr on config.tokens (pydantic model)
                 token_value = getattr(self.config.tokens, token_name.value.lower(), None)
                 if token_value:
                     return token_value
-        return self.config.token
+        # Fallback to the main token
+        if self.config.token:
+            return self.config.token
+        raise ValueError("No suitable token found for the request.")
+
+    def _get_token_preferences(self, method_name: str) -> list[EngineTokenName]:
+        """Gets the token preferences attached to a method."""
+        method = getattr(self, method_name, None)
+        if method and hasattr(method, "_api_endpoint_info"):
+            return getattr(method, "_api_endpoint_info")
+        return []
 
     def headers(
         self,
@@ -103,7 +115,9 @@ class EngineClient(BaseClient):
             "ocr": ocr_pages,
             "searchable_pdf_url": searchable_pdf,
         }
-        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        token_prefs = [EngineTokenName.ZIEB, EngineTokenName.ADMIN]
+        self.update_doc._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
@@ -139,7 +153,9 @@ class EngineClient(BaseClient):
         # Use model_dump for the dictionary, pass it to the json parameter
         data_dict = updates.model_dump(exclude_none=True, exclude_unset=True)
 
-        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        token_prefs = [EngineTokenName.ZIEB, EngineTokenName.ADMIN]
+        self.update_doc_suggestions._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
@@ -177,8 +193,9 @@ class EngineClient(BaseClient):
             "with_summary": str(with_summary).lower(),
             "with_wwm": str(with_wwm).lower(),
         }
-        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
-        request_headers = self.headers(token=token)  # Default headers are suitable for GET expecting JSON
+        # This method delegates, so we get the prefs from the target
+        token_prefs = self._get_token_preferences("get_case_data_all")
+        self.get_case_data._api_endpoint_info = token_prefs  # type: ignore
         resp = await self.session.get(
             self._url(path),
             params=params,
@@ -219,7 +236,9 @@ class EngineClient(BaseClient):
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx) other than 200.
         """
         path: str = "/_health"
-        token = self._get_token([])
+        token_prefs: list[EngineTokenName] = []
+        self.health._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers(token=token)
         resp = await self.session.get(
             self._url(path),
@@ -250,7 +269,9 @@ class EngineClient(BaseClient):
         path = f"/api/admin/action_triggers/{engine_trigger.trigger_id}"
         # Params should include query parameters
         params = engine_trigger.model_dump(include={"request_id", "client", "attempt"}, exclude_none=True)
-        token = self._get_token([EngineTokenName.ADMIN])
+        token_prefs = [EngineTokenName.ADMIN]
+        self.action_trigger._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers("form", token=token)  # Original used form content type
         resp = await self.session.put(
             self._url(path),
@@ -317,7 +338,9 @@ class EngineClient(BaseClient):
             payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = None  # Explicitly set to None for creation
 
-        token = self._get_token([EngineTokenName.ADMIN])
+        token_prefs = [EngineTokenName.ADMIN]
+        self.create_request._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers("form", token=token)
         resp = await self.session.post(
             self._url(path),
@@ -351,7 +374,9 @@ class EngineClient(BaseClient):
         payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = request_id  # Set the request_id for update
 
-        token = self._get_token([EngineTokenName.ADMIN])
+        token_prefs = [EngineTokenName.ADMIN]
+        self.update_request._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers("form", token=token)
         resp = await self.session.put(
             self._url(path),
@@ -382,7 +407,9 @@ class EngineClient(BaseClient):
         url = self._url("/api/insights")
         # Use model_dump for the dictionary, pass it to the json parameter
         data_dict = docs.model_dump(exclude_none=True, exclude_unset=True)
-        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        token_prefs = [EngineTokenName.ZIEB, EngineTokenName.ADMIN]
+        self.update_insights._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
@@ -413,7 +440,9 @@ class EngineClient(BaseClient):
         """
         url = self._url("/api/scheduled_call_response")
         data_dict = json.loads(telli_event.model_dump_json(exclude_none=True, exclude_unset=True))
-        token = self._get_token([EngineTokenName.ADMIN])
+        token_prefs = [EngineTokenName.ADMIN]
+        self.scheduled_call_response._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers(token=token)  # Default content_type is 'json'
 
         resp = await self.session.post(
@@ -444,7 +473,9 @@ class EngineClient(BaseClient):
         url = self._url(f"/api/case_summaries/{request_id}")
         # The payload is the list of summary objects. `aiohttp` will serialize it.
         data = [item.model_dump(exclude_none=True) for item in summary]
-        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        token_prefs = [EngineTokenName.ZIEB, EngineTokenName.ADMIN]
+        self.update_case_summary._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
         request_headers = self.headers(token=token)
         resp = await self.session.post(
             url,

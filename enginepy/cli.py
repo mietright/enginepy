@@ -5,18 +5,23 @@ import inspect
 import json
 import logging
 from collections.abc import Callable
+from enum import StrEnum
 from inspect import Parameter, Signature
 from typing import Annotated, Any, get_args, get_origin
 
 import pydantic
 import typer
+import yaml
 from aiohttp import ClientResponseError
+from rich.console import Console
+from rich.table import Table
 
 # Import the actual config loader
 from enginepy.config import config
 
 # Import the client and models
 from enginepy.engine_client import EngineClient
+from enginepy.models import ApiEndpoint
 
 logger = logging.getLogger(__name__)
 
@@ -359,8 +364,82 @@ def create_cli_commands() -> None:
             create_command_for_method(name, method)
 
 
+class OutputFormat(StrEnum):
+    TABLE = "table"
+    JSON = "json"
+    YAML = "yaml"
+
+
+def _get_api_endpoints() -> list[ApiEndpoint]:
+    """Inspects the EngineClient and returns a list of discovered API endpoints."""
+    endpoints = []
+    # We need an instance to access the decorated preferences
+    client_prototype = EngineClient(endpoint="dummy", token="dummy")
+    exclude_methods = {
+        "__init__",
+        "set_token",
+        "headers",
+        "_url",
+        "log_request",
+        "close",
+        "action_triggers",  # Exclude wrappers
+    }
+
+    for name, method in inspect.getmembers(client_prototype):
+        if inspect.iscoroutinefunction(method) and not name.startswith("_") and name not in exclude_methods:
+            # Check for our custom attribute
+            if hasattr(method, "_api_endpoint_info"):
+                prefs = getattr(method, "_api_endpoint_info", [])
+                endpoints.append(
+                    ApiEndpoint(
+                        command=name.replace("_", "-"),
+                        method_name=name,
+                        token_preferences=prefs,
+                    )
+                )
+    return sorted(endpoints, key=lambda x: x.command)
+
+
+@cli.command(name="list-endpoints", help="List all available API commands and their details.")
+def list_endpoints(
+    output: Annotated[
+        OutputFormat,
+        typer.Option(
+            "--output",
+            "-o",
+            help="The output format for the endpoint list.",
+            case_sensitive=False,
+        ),
+    ] = OutputFormat.TABLE,
+) -> None:
+    """Lists all dynamically created API commands."""
+    endpoints = _get_api_endpoints()
+    if output == OutputFormat.JSON:
+        print(json.dumps([ep.model_dump() for ep in endpoints], indent=2))
+    elif output == OutputFormat.YAML:
+        print(yaml.dump([ep.model_dump() for ep in endpoints], sort_keys=False))
+    else:  # Default to table
+        console = Console()
+        table = Table(title="Available API Endpoints")
+        table.add_column("Command", style="cyan", no_wrap=True)
+        table.add_column("Client Method", style="magenta")
+        table.add_column("Token Preference (Priority)", style="green")
+
+        for endpoint in endpoints:
+            token_str = ", ".join(t.value for t in endpoint.token_preferences) if endpoint.token_preferences else "default"
+            table.add_row(endpoint.command, endpoint.method_name, token_str)
+
+        console.print(table)
+
+
 def create_command_for_method(method_name: str, method_obj: Callable[..., Any]) -> None:
     """Creates and registers a single Typer command for a given EngineClient method."""
+    # Check if the method should be exposed
+    client_prototype = EngineClient(endpoint="dummy", token="dummy")
+    method_to_check = getattr(client_prototype, method_name, None)
+    if not (method_to_check and hasattr(method_to_check, "_api_endpoint_info")):
+        return
+
     method_sig = inspect.signature(method_obj)
     method_doc = inspect.getdoc(method_obj) or f"Calls the {method_name} method."
     command_name = method_name.replace("_", "-")

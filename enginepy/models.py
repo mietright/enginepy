@@ -246,6 +246,16 @@ class EngineField(BaseModel):
     type: EngineTypeEnum = Field(EngineTypeEnum.STRING)
 
 
+class ApiEndpoint(BaseModel):
+    """Represents a CLI-exposed API endpoint."""
+
+    command: str = Field(..., description="The CLI command to invoke the endpoint.")
+    method_name: str = Field(..., description="The EngineClient method name.")
+    token_preferences: list[EngineTokenName] = Field(
+        default_factory=list, description="The preferred tokens for this endpoint, in order of priority."
+    )
+
+
 class EngineRequest(BaseModel):
     product: str = Field(...)
     funnel: str = Field(...)
