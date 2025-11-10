@@ -23,8 +23,8 @@ unit test:
     name: python:3.12
   stage: test
   before_script:
-    - pip install uv
-    - uv sync --all-extras --dev
+    - pip install uv -U
+    - uv sync --all-extras
   script:
     - make test
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
@@ -44,8 +44,8 @@ code lint:
     name: python:3.12
   stage: test
   before_script:
-    - pip install uv
-    - uv sync --all-extras --dev
+    - pip install uv -U
+    - uv sync --all-extras
   script:
     - make check
   tags:
