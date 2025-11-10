@@ -10,7 +10,6 @@ from aiohttp.client import ClientTimeout
 from ant31box.client.base import BaseClient
 
 from enginepy.gen.cagents import SummaryResponseOutput
-
 from enginepy.models import (
     AgentClassifierWorkflowOutput,
     AwsClassifierResult,
