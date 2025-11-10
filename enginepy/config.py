@@ -18,7 +18,7 @@ LOGGING_CONFIG["handlers"].update(
         },
     }
 )
-LOGGING_CONFIG["loggers"].update({"root": {"handlers": ["default"], "level": "DEBUG", "propagate": True}, "enginepy": {"handlers": ["default"], "level": "DEBUG", "propagate": False}})
+LOGGING_CONFIG["loggers"].update({"root": {"handlers": ["default"], "level": "DEBUG", "propagate": True}, "enginepy": {"handlers": ["default"], "level": "DEBUG", "propagate": True}})
 
 logger: logging.Logger = logging.getLogger("enginepy")
 
