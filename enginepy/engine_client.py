@@ -399,7 +399,7 @@ class EngineClient(BaseClient):
         Raises:
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
         """
-        url = self._url(f"/api/zieb/requests/{request_id}/summary")
+        url = self._url(f"/api/case_summaries/{request_id}")
         # The payload is the list of summary objects. `aiohttp` will serialize it.
         data = [item.model_dump(exclude_none=True) for item in summary]
         request_headers = self.headers()
