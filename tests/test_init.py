@@ -21,18 +21,16 @@ def mock_logfire_config_no_token() -> LogfireConfigSchema:
 @pytest.fixture
 def mock_config(mock_logfire_config: LogfireConfigSchema) -> ConfigSchema:
     """Fixture for a main ConfigSchema."""
-    cfg = ConfigSchema() # Uses defaults
+    cfg = ConfigSchema(app={"env": "test-env"})  # Uses defaults
     cfg.logfire = mock_logfire_config
-    cfg.app.env = "test-env"
     return cfg
 
 
 @pytest.fixture
 def mock_config_no_token(mock_logfire_config_no_token: LogfireConfigSchema) -> ConfigSchema:
     """Fixture for a main ConfigSchema with no logfire token."""
-    cfg = ConfigSchema() # Uses defaults
+    cfg = ConfigSchema(app={"env": "test-env-no-token"})  # Uses defaults
     cfg.logfire = mock_logfire_config_no_token
-    cfg.app.env = "test-env-no-token"
     return cfg
 
 
