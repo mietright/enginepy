@@ -420,18 +420,18 @@ def list_endpoints(
         console = Console()
         table = Table(title="Available API Endpoints")
         table.add_column("Command", style="cyan", no_wrap=True)
-        table.add_column("Client Method", style="magenta")
         table.add_column("HTTP Method", style="yellow")
         table.add_column("API Path", style="blue")
+        table.add_column("Client Method", style="magenta")
         table.add_column("Token Preference (Priority)", style="green")
 
         for endpoint in endpoints:
             token_str = ", ".join(t.value for t in endpoint.token_preferences) if endpoint.token_preferences else "default"
             table.add_row(
                 endpoint.command,
-                endpoint.method_name,
                 endpoint.http_method,
                 endpoint.path,
+                endpoint.method_name,
                 token_str,
             )
 
