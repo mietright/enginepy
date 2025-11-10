@@ -73,7 +73,7 @@ API_ENDPOINT_METADATA: dict[str, dict[str, Any]] = {
         "method": "POST",
     },
     "update_case_summary": {
-        "tokens": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
+        "tokens": [EngineTokenName.ADMIN],
         "path": "/api/case_summaries/{request_id}",
         "method": "POST",
     },
