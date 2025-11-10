@@ -163,6 +163,21 @@ class DefaultType(StrEnum):
     NOT_FOUND = "__not_found__"
 
 
+class EngineTokenName(StrEnum):
+    """Enum for named tokens in the configuration."""
+
+    ADMIN = "admin"
+    ZIEB = "zieb"
+    CREATOR = "creator"
+    CONCIERGE = "concierge"
+    MAIL_PROCESSOR = "mail_processor"
+    FRONTEND = "frontend"
+    DCA = "dca"
+    DOCX = "docx"
+    ACCOUNTING = "accounting"
+    BEA = "bea"
+
+
 class EngineTypeEnum(StrEnum):
     PHONE = "phone"
     STRING = "string"

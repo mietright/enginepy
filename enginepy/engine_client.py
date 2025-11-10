@@ -9,6 +9,7 @@ from typing import Any, Literal
 from aiohttp.client import ClientTimeout
 from ant31box.client.base import BaseClient
 
+from enginepy.config import EngineConfigSchema
 from enginepy.gen.cagents import SummaryResponseOutput
 from enginepy.models import (
     AgentClassifierWorkflowOutput,
@@ -16,6 +17,7 @@ from enginepy.models import (
     CaseRawData,
     DocsResponse,
     EngineRequest,
+    EngineTokenName,
     EngineTrigger,
 )
 from enginepy.telli.models import TelliWebhook
@@ -24,24 +26,39 @@ logger = logging.getLogger(__name__)
 
 
 class EngineClient(BaseClient):
-    def __init__(self, endpoint: str, token: str) -> None:
+    def __init__(self, config: EngineConfigSchema) -> None:
         # Added client_name for consistency and potential logging/tracing benefits
-        super().__init__(endpoint=endpoint, verify_tls=False, client_name="engine")
-        self.token = token
+        super().__init__(endpoint=config.endpoint, verify_tls=False, client_name="engine")
+        self.config = config
         # self.ssl_mode is inherited from BaseClient and defaults based on verify_tls
 
     def set_token(self, token: str) -> None:
-        """Updates the authentication token used for subsequent requests."""
-        self.token = token
+        """Updates the default authentication token used for subsequent requests."""
+        self.config.token = token
+
+    def _get_token(self, token_prefs: list[EngineTokenName] | None = None) -> str:
+        """
+        Resolves which token to use based on a priority list.
+
+        Iterates through the preferred token names, returning the first one found in the
+        configuration. If none are found, it falls back to the default token.
+        """
+        if token_prefs:
+            for token_name in token_prefs:
+                token_value = getattr(self.config.tokens, token_name.value.lower(), None)
+                if token_value:
+                    return token_value
+        return self.config.token
 
     def headers(
         self,
         content_type: Literal["json", "form"] | str | None = "json",
         extra: dict[str, str] | None = None,
+        token: str | None = None,
     ) -> dict[str, str]:
         headers_dict = {
             "Accept": "*/*",
-            "token": self.token,
+            "token": token or self.config.token,
         }
 
         if extra is not None:
@@ -70,7 +87,8 @@ class EngineClient(BaseClient):
             "ocr": ocr_pages,
             "searchable_pdf_url": searchable_pdf,
         }
-        request_headers = self.headers()
+        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
@@ -105,7 +123,8 @@ class EngineClient(BaseClient):
         # Use model_dump for the dictionary, pass it to the json parameter
         data_dict = updates.model_dump(exclude_none=True, exclude_unset=True)
 
-        request_headers = self.headers()
+        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
@@ -142,7 +161,8 @@ class EngineClient(BaseClient):
             "with_summary": str(with_summary).lower(),
             "with_wwm": str(with_wwm).lower(),
         }
-        request_headers = self.headers()  # Default headers are suitable for GET expecting JSON
+        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        request_headers = self.headers(token=token)  # Default headers are suitable for GET expecting JSON
         resp = await self.session.get(
             self._url(path),
             params=params,
@@ -183,7 +203,8 @@ class EngineClient(BaseClient):
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx) other than 200.
         """
         path: str = "/_health"
-        request_headers = self.headers()
+        token = self._get_token([])
+        request_headers = self.headers(token=token)
         resp = await self.session.get(
             self._url(path),
             headers=request_headers,
@@ -213,7 +234,8 @@ class EngineClient(BaseClient):
         path = f"/api/admin/action_triggers/{engine_trigger.trigger_id}"
         # Params should include query parameters
         params = engine_trigger.model_dump(include={"request_id", "client", "attempt"}, exclude_none=True)
-        request_headers = self.headers("form")  # Original used form content type
+        token = self._get_token([EngineTokenName.ADMIN])
+        request_headers = self.headers("form", token=token)  # Original used form content type
         resp = await self.session.put(
             self._url(path),
             params=params,
@@ -279,7 +301,8 @@ class EngineClient(BaseClient):
             payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = None  # Explicitly set to None for creation
 
-        request_headers = self.headers("form")
+        token = self._get_token([EngineTokenName.ADMIN])
+        request_headers = self.headers("form", token=token)
         resp = await self.session.post(
             self._url(path),
             headers=request_headers,
@@ -312,7 +335,8 @@ class EngineClient(BaseClient):
         payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = request_id  # Set the request_id for update
 
-        request_headers = self.headers("form")
+        token = self._get_token([EngineTokenName.ADMIN])
+        request_headers = self.headers("form", token=token)
         resp = await self.session.put(
             self._url(path),
             headers=request_headers,
@@ -342,7 +366,8 @@ class EngineClient(BaseClient):
         url = self._url("/api/insights")
         # Use model_dump for the dictionary, pass it to the json parameter
         data_dict = docs.model_dump(exclude_none=True, exclude_unset=True)
-        request_headers = self.headers()
+        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
@@ -372,7 +397,8 @@ class EngineClient(BaseClient):
         """
         url = self._url("/api/scheduled_call_response")
         data_dict = json.loads(telli_event.model_dump_json(exclude_none=True, exclude_unset=True))
-        request_headers = self.headers()  # Default content_type is 'json'
+        token = self._get_token([EngineTokenName.ADMIN])
+        request_headers = self.headers(token=token)  # Default content_type is 'json'
 
         resp = await self.session.post(
             url,
@@ -402,7 +428,8 @@ class EngineClient(BaseClient):
         url = self._url(f"/api/case_summaries/{request_id}")
         # The payload is the list of summary objects. `aiohttp` will serialize it.
         data = [item.model_dump(exclude_none=True) for item in summary]
-        request_headers = self.headers()
+        token = self._get_token([EngineTokenName.ZIEB, EngineTokenName.ADMIN])
+        request_headers = self.headers(token=token)
         resp = await self.session.post(
             url,
             json=data,

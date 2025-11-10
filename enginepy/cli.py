@@ -335,7 +335,7 @@ def main_callback(
 
         # Initialize client and store in state
         # Note: Client session is created on first use by BaseClient
-        client = EngineClient(endpoint=conf.engine.endpoint, token=conf.engine.token)
+        client = EngineClient(config=conf.engine)
         cli_state["client"] = client
         logger.info("EngineClient initialized for endpoint: %s", conf.engine.endpoint)
 
