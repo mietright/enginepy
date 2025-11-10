@@ -1,4 +1,3 @@
-import os
 
 from enginepy.config import Config, EngineConfigSchema, LogfireConfigSchema, config
 
