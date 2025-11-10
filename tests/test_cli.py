@@ -109,8 +109,10 @@ def test_cli_main_callback_success(runner: CliRunner, mock_config_instance: Conf
     assert enginepy.cli.cli_state["mock_load_config"].called
     # Check that client was initialized (mocked)
     assert enginepy.cli.cli_state["mock_client_class"].call_count == 1
-    assert enginepy.cli.cli_state["mock_client_class"].call_args[1]["endpoint"] == mock_config_instance.engine.endpoint
-    assert enginepy.cli.cli_state["mock_client_class"].call_args[1]["token"] == mock_config_instance.engine.token
+    # The CLI now passes the entire engine config object to the client constructor
+    call_kwargs = enginepy.cli.cli_state["mock_client_class"].call_args.kwargs
+    assert "config" in call_kwargs
+    assert call_kwargs["config"] == mock_config_instance.engine
     # Check that the client is stored in state
     assert enginepy.cli.cli_state.get("client") is mock_engine_client
     # Check that the command's execute function was called
