@@ -64,6 +64,7 @@ class ConfigSchema(ant31box.config.BaseSettings):
 
     sentry: SentryConfigSchema = Field(default_factory=SentryConfigSchema)
     name: str = Field(default="enginepy")
+    app: dict[str, Any] = Field(default_factory=dict)
     logfire: LogfireConfigSchema = Field(default_factory=LogfireConfigSchema)
     engine: EngineConfigSchema = Field(default_factory=EngineConfigSchema)
     logging: LoggingConfigSchema = Field(default_factory=LoggingConfigSchema)
