@@ -13,6 +13,7 @@ import pydantic
 import typer
 import yaml
 from aiohttp import ClientResponseError
+from ant31box.cmd.typer.default_config import app as default_config_app
 from rich.console import Console
 from rich.table import Table
 
@@ -457,7 +458,9 @@ def create_command_for_method(method_name: str, method_obj: Callable[..., Any]) 
 
 # --- Initialization ---
 # Create commands when the module is loaded
+cli.add_typer(default_config_app)
 create_cli_commands()
+
 
 if __name__ == "__main__":
     cli()  # Renamed app to cli
