@@ -298,11 +298,14 @@ def _create_sync_command_wrapper(
 # Use a dictionary to store state, including the client instance
 cli_state: dict[str, Any] = {}
 
-cli = typer.Typer(  # Renamed app to cli
+cli = typer.Typer(
     name="enginepy",
     help="Enginepy CLI tool to interact with the Engine API.",
     add_completion=True,  # Enable shell completion
 )
+
+call_app = typer.Typer(name="call", help="Call an Engine API endpoint directly.")
+cli.add_typer(call_app)
 
 
 # Callback runs before any command, used for setup (config, client init)
@@ -458,8 +461,8 @@ def create_command_for_method(method_name: str, method_obj: Callable[..., Any]) 
     # Create the synchronous wrapper which calls the async execution logic
     sync_wrapper = _create_sync_command_wrapper(method_name, method_sig, method_doc)
 
-    # Register the command with Typer
-    cli.command(name=command_name, help=method_doc)(sync_wrapper)  # Renamed app to cli
+    # Register the command with Typer under the 'call' subcommand
+    call_app.command(name=command_name, help=method_doc)(sync_wrapper)
 
 
 # --- Initialization ---
