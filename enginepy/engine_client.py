@@ -9,6 +9,8 @@ from typing import Any, Literal
 from aiohttp.client import ClientTimeout
 from ant31box.client.base import BaseClient
 
+from enginepy.gen.cagents import SummaryResponseOutput
+
 from enginepy.models import (
     AgentClassifierWorkflowOutput,
     AwsClassifierResult,
@@ -383,3 +385,17 @@ class EngineClient(BaseClient):
         await self.log_request(resp)
         resp.raise_for_status()
         return await resp.json()
+
+    def update_case_summary(self, request_id: int, summary: list[SummaryResponseOutput]) -> dict[str, Any]:
+        url = self._url(f"/api/zieb/requests/{request_id}/summary")
+        # The payload is the list directly, so we need to dump it as a JSON string
+        data = json.dumps([item.model_dump(exclude_none=True) for item in summary])
+        headers = self.headers()
+        resp = requests.post(
+            url,
+            data=data,
+            headers=headers,
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return resp.json()

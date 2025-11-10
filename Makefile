@@ -132,3 +132,11 @@ bump:
 
 upgrade-dep:
 	uv lock -U --resolution=highest
+
+openapi-json:
+	mkdir -p openapi
+	curl https://cagents.a1.conny.dev/openapi.json  > openapi/cagents.json
+
+generate-models: openapi-json
+	mkdir -p $(package)/gen
+	uv run datamodel-codegen --custom-file-header "# pylint: skip-file" --use-union-operator --capitalize-enum-members --snake-case-field --allow-extra-fields --collapse-root-models --target-python-version=3.12 --input-file-type openapi  --input openapi/cagents.json  --output $(package)/gen/cagents.py  --output-model-type pydantic_v2.BaseModel   --set-default-enum-member   --use-subclass-enum   --use-standard-collections --use-default-kwarg
