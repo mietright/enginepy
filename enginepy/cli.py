@@ -20,7 +20,7 @@ from rich.table import Table
 from enginepy.config import config
 
 # Import the client and models
-from enginepy.engine_client import API_ENDPOINT_TOKEN_PREFS, EngineClient
+from enginepy.engine_client import API_ENDPOINT_METADATA, EngineClient
 from enginepy.models import ApiEndpoint
 
 logger = logging.getLogger(__name__)
@@ -384,13 +384,15 @@ def _get_api_endpoints() -> list[ApiEndpoint]:
     }
 
     for name, _ in inspect.getmembers(EngineClient):
-        if name in API_ENDPOINT_TOKEN_PREFS and name not in exclude_methods and not name.startswith("_"):
-            prefs = API_ENDPOINT_TOKEN_PREFS[name]
+        if name in API_ENDPOINT_METADATA and name not in exclude_methods and not name.startswith("_"):
+            meta = API_ENDPOINT_METADATA[name]
             endpoints.append(
                 ApiEndpoint(
                     command=name.replace("_", "-"),
                     method_name=name,
-                    token_preferences=prefs,
+                    path=meta["path"],
+                    http_method=meta["method"],
+                    token_preferences=meta["tokens"],
                 )
             )
     return sorted(endpoints, key=lambda x: x.command)
@@ -419,11 +421,19 @@ def list_endpoints(
         table = Table(title="Available API Endpoints")
         table.add_column("Command", style="cyan", no_wrap=True)
         table.add_column("Client Method", style="magenta")
+        table.add_column("HTTP Method", style="yellow")
+        table.add_column("API Path", style="blue")
         table.add_column("Token Preference (Priority)", style="green")
 
         for endpoint in endpoints:
             token_str = ", ".join(t.value for t in endpoint.token_preferences) if endpoint.token_preferences else "default"
-            table.add_row(endpoint.command, endpoint.method_name, token_str)
+            table.add_row(
+                endpoint.command,
+                endpoint.method_name,
+                endpoint.http_method,
+                endpoint.path,
+                token_str,
+            )
 
         console.print(table)
 
@@ -431,7 +441,7 @@ def list_endpoints(
 def create_command_for_method(method_name: str, method_obj: Callable[..., Any]) -> None:
     """Creates and registers a single Typer command for a given EngineClient method."""
     # Check if the method is in our exposed endpoints list
-    if method_name not in API_ENDPOINT_TOKEN_PREFS:
+    if method_name not in API_ENDPOINT_METADATA:
         return
 
     method_sig = inspect.signature(method_obj)

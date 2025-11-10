@@ -25,18 +25,58 @@ from enginepy.telli.models import TelliWebhook
 logger = logging.getLogger(__name__)
 
 
-API_ENDPOINT_TOKEN_PREFS: dict[str, list[EngineTokenName]] = {
-    "update_doc": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
-    "update_doc_suggestions": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
-    "get_case_data_all": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
-    "get_case_data": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
-    "health": [],
-    "action_trigger": [EngineTokenName.ADMIN],
-    "create_request": [EngineTokenName.ADMIN],
-    "update_request": [EngineTokenName.ADMIN],
-    "update_insights": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
-    "scheduled_call_response": [EngineTokenName.ADMIN],
-    "update_case_summary": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
+API_ENDPOINT_METADATA: dict[str, dict[str, Any]] = {
+    "update_doc": {
+        "tokens": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
+        "path": "/api/zieb/documents/ocr",
+        "method": "POST",
+    },
+    "update_doc_suggestions": {
+        "tokens": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
+        "path": "/api/zieb/documents/update_suggestions",
+        "method": "POST",
+    },
+    "get_case_data_all": {
+        "tokens": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
+        "path": "/api/case_data",
+        "method": "GET",
+    },
+    "get_case_data": {
+        "tokens": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
+        "path": "/api/case_data",
+        "method": "GET",
+    },
+    "health": {"tokens": [], "path": "/_health", "method": "GET"},
+    "action_trigger": {
+        "tokens": [EngineTokenName.ADMIN],
+        "path": "/api/admin/action_triggers/{trigger_id}",
+        "method": "PUT",
+    },
+    "create_request": {
+        "tokens": [EngineTokenName.ADMIN],
+        "path": "/api/admin/data_source",
+        "method": "POST",
+    },
+    "update_request": {
+        "tokens": [EngineTokenName.ADMIN],
+        "path": "/api/admin/data_source",
+        "method": "PUT",
+    },
+    "update_insights": {
+        "tokens": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
+        "path": "/api/insights",
+        "method": "POST",
+    },
+    "scheduled_call_response": {
+        "tokens": [EngineTokenName.ADMIN],
+        "path": "/api/scheduled_call_response",
+        "method": "POST",
+    },
+    "update_case_summary": {
+        "tokens": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
+        "path": "/api/case_summaries/{request_id}",
+        "method": "POST",
+    },
 }
 
 
@@ -122,7 +162,7 @@ class EngineClient(BaseClient):
             "ocr": ocr_pages,
             "searchable_pdf_url": searchable_pdf,
         }
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["update_doc"])
+        token = self._get_token(API_ENDPOINT_METADATA["update_doc"]["tokens"])
         request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
@@ -158,7 +198,7 @@ class EngineClient(BaseClient):
         # Use model_dump for the dictionary, pass it to the json parameter
         data_dict = updates.model_dump(exclude_none=True, exclude_unset=True)
 
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["update_doc_suggestions"])
+        token = self._get_token(API_ENDPOINT_METADATA["update_doc_suggestions"]["tokens"])
         request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
@@ -196,7 +236,7 @@ class EngineClient(BaseClient):
             "with_summary": str(with_summary).lower(),
             "with_wwm": str(with_wwm).lower(),
         }
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["get_case_data_all"])
+        token = self._get_token(API_ENDPOINT_METADATA["get_case_data_all"]["tokens"])
         request_headers = self.headers(token=token)  # Default headers are suitable for GET expecting JSON
         resp = await self.session.get(
             self._url(path),
@@ -238,7 +278,7 @@ class EngineClient(BaseClient):
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx) other than 200.
         """
         path: str = "/_health"
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["health"])
+        token = self._get_token(API_ENDPOINT_METADATA["health"]["tokens"])
         request_headers = self.headers(token=token)
         resp = await self.session.get(
             self._url(path),
@@ -269,7 +309,7 @@ class EngineClient(BaseClient):
         path = f"/api/admin/action_triggers/{engine_trigger.trigger_id}"
         # Params should include query parameters
         params = engine_trigger.model_dump(include={"request_id", "client", "attempt"}, exclude_none=True)
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["action_trigger"])
+        token = self._get_token(API_ENDPOINT_METADATA["action_trigger"]["tokens"])
         request_headers = self.headers("form", token=token)  # Original used form content type
         resp = await self.session.put(
             self._url(path),
@@ -336,7 +376,7 @@ class EngineClient(BaseClient):
             payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = None  # Explicitly set to None for creation
 
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["create_request"])
+        token = self._get_token(API_ENDPOINT_METADATA["create_request"]["tokens"])
         request_headers = self.headers("form", token=token)
         resp = await self.session.post(
             self._url(path),
@@ -370,7 +410,7 @@ class EngineClient(BaseClient):
         payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = request_id  # Set the request_id for update
 
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["update_request"])
+        token = self._get_token(API_ENDPOINT_METADATA["update_request"]["tokens"])
         request_headers = self.headers("form", token=token)
         resp = await self.session.put(
             self._url(path),
@@ -401,7 +441,7 @@ class EngineClient(BaseClient):
         url = self._url("/api/insights")
         # Use model_dump for the dictionary, pass it to the json parameter
         data_dict = docs.model_dump(exclude_none=True, exclude_unset=True)
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["update_insights"])
+        token = self._get_token(API_ENDPOINT_METADATA["update_insights"]["tokens"])
         request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
         resp = await self.session.post(
@@ -432,7 +472,7 @@ class EngineClient(BaseClient):
         """
         url = self._url("/api/scheduled_call_response")
         data_dict = json.loads(telli_event.model_dump_json(exclude_none=True, exclude_unset=True))
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["scheduled_call_response"])
+        token = self._get_token(API_ENDPOINT_METADATA["scheduled_call_response"]["tokens"])
         request_headers = self.headers(token=token)  # Default content_type is 'json'
 
         resp = await self.session.post(
@@ -463,7 +503,7 @@ class EngineClient(BaseClient):
         url = self._url(f"/api/case_summaries/{request_id}")
         # The payload is the list of summary objects. `aiohttp` will serialize it.
         data = [item.model_dump(exclude_none=True) for item in summary]
-        token = self._get_token(API_ENDPOINT_TOKEN_PREFS["update_case_summary"])
+        token = self._get_token(API_ENDPOINT_METADATA["update_case_summary"]["tokens"])
         request_headers = self.headers(token=token)
         resp = await self.session.post(
             url,

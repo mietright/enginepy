@@ -251,6 +251,8 @@ class ApiEndpoint(BaseModel):
 
     command: str = Field(..., description="The CLI command to invoke the endpoint.")
     method_name: str = Field(..., description="The EngineClient method name.")
+    path: str = Field(..., description="The API endpoint path.")
+    http_method: str = Field(..., description="The HTTP method (e.g., GET, POST).")
     token_preferences: list[EngineTokenName] = Field(
         default_factory=list, description="The preferred tokens for this endpoint, in order of priority."
     )
