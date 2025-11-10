@@ -386,17 +386,20 @@ def _get_api_endpoints() -> list[ApiEndpoint]:
     }
 
     for name, method in inspect.getmembers(client_prototype):
-        if inspect.iscoroutinefunction(method) and not name.startswith("_") and name not in exclude_methods:
-            # Check for our custom attribute
-            if hasattr(method, "_api_endpoint_info"):
-                prefs = getattr(method, "_api_endpoint_info", [])
-                endpoints.append(
-                    ApiEndpoint(
-                        command=name.replace("_", "-"),
-                        method_name=name,
-                        token_preferences=prefs,
-                    )
+        if (
+            inspect.iscoroutinefunction(method)
+            and not name.startswith("_")
+            and name not in exclude_methods
+            and hasattr(method, "_api_endpoint_info")
+        ):
+            prefs = getattr(method, "_api_endpoint_info", [])
+            endpoints.append(
+                ApiEndpoint(
+                    command=name.replace("_", "-"),
+                    method_name=name,
+                    token_preferences=prefs,
                 )
+            )
     return sorted(endpoints, key=lambda x: x.command)
 
 

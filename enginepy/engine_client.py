@@ -192,9 +192,10 @@ class EngineClient(BaseClient):
             "with_summary": str(with_summary).lower(),
             "with_wwm": str(with_wwm).lower(),
         }
-        # This method delegates, so we get the prefs from the target
-        token_prefs = self._get_token_preferences("get_case_data_all")
-        self.get_case_data._api_endpoint_info = token_prefs  # type: ignore
+        token_prefs = [EngineTokenName.ZIEB, EngineTokenName.ADMIN]
+        self.get_case_data_all._api_endpoint_info = token_prefs  # type: ignore
+        token = self._get_token(token_prefs)
+        request_headers = self.headers(token=token)  # Default headers are suitable for GET expecting JSON
         resp = await self.session.get(
             self._url(path),
             params=params,
