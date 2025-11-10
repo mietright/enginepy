@@ -163,6 +163,21 @@ class DefaultType(StrEnum):
     NOT_FOUND = "__not_found__"
 
 
+class EngineTokenName(StrEnum):
+    """Enum for named tokens in the configuration."""
+
+    ADMIN = "admin"
+    ZIEB = "zieb"
+    CREATOR = "creator"
+    CONCIERGE = "concierge"
+    MAIL_PROCESSOR = "mail_processor"
+    FRONTEND = "frontend"
+    DCA = "dca"
+    DOCX = "docx"
+    ACCOUNTING = "accounting"
+    BEA = "bea"
+
+
 class EngineTypeEnum(StrEnum):
     PHONE = "phone"
     STRING = "string"
@@ -229,6 +244,18 @@ class EngineField(BaseModel):
     field: str = Field(...)
     answer: bool | str | int | float | None = Field(None)
     type: EngineTypeEnum = Field(EngineTypeEnum.STRING)
+
+
+class ApiEndpoint(BaseModel):
+    """Represents a CLI-exposed API endpoint."""
+
+    command: str = Field(..., description="The CLI command to invoke the endpoint.")
+    method_name: str = Field(..., description="The EngineClient method name.")
+    path: str = Field(..., description="The API endpoint path.")
+    http_method: str = Field(..., description="The HTTP method (e.g., GET, POST).")
+    token_preferences: list[EngineTokenName] = Field(
+        default_factory=list, description="The preferred tokens for this endpoint, in order of priority."
+    )
 
 
 class EngineRequest(BaseModel):

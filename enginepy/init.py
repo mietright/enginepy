@@ -23,5 +23,5 @@ def init_logfire(
 def init(config: ConfigSchema, mode: Literal["server", "worker"] = "server", extra: dict[str, Any] | None = None):
     if not extra:
         extra = {}
-    extra["env"] = config.app.env
+    extra["env"] = config.app.get("env", "dev")
     init_logfire(config.logfire, mode, extra)

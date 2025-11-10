@@ -18,7 +18,7 @@ LOGGING_CONFIG["handlers"].update(
         },
     }
 )
-LOGGING_CONFIG["loggers"].update({"root": {"handlers": ["default"], "level": "DEBUG", "propagate": True}})
+LOGGING_CONFIG["loggers"].update({"root": {"handlers": ["default"], "level": "DEBUG", "propagate": True}, "enginepy": {"handlers": ["default"], "level": "DEBUG", "propagate": True}})
 
 logger: logging.Logger = logging.getLogger("enginepy")
 
@@ -54,21 +54,33 @@ ENVPREFIX = "ENGINEPY"
 
 
 # Main configuration schema
-class ConfigSchema(ant31box.config.ConfigSchema):
+class ConfigSchema(ant31box.config.BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix=f"{ENVPREFIX}_",
         env_nested_delimiter="__",
         case_sensitive=False,
         extra="allow",
     )
+
+    sentry: SentryConfigSchema = Field(default_factory=SentryConfigSchema)
     name: str = Field(default="enginepy")
+    app: dict[str, Any] = Field(default_factory=dict)
     logfire: LogfireConfigSchema = Field(default_factory=LogfireConfigSchema)
     engine: EngineConfigSchema = Field(default_factory=EngineConfigSchema)
+    logging: LoggingConfigSchema = Field(default_factory=LoggingConfigSchema)
 
 
-class Config(ant31box.config.Config[ConfigSchema]):
+class Config(ant31box.config.GenericConfig[ConfigSchema]):
     _env_prefix = ENVPREFIX
     __config_class__ = ConfigSchema
+
+    @property
+    def logging(self) -> LoggingConfigSchema:
+        return self.conf.logging
+
+    @property
+    def name(self) -> str:
+        return self.conf.name
 
     @property
     def logfire(self) -> LogfireConfigSchema:

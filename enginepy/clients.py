@@ -22,4 +22,4 @@ def engine_client() -> EngineClient:
         A cached EngineClient instance.
     """
     cfg = config()
-    return EngineClient(cfg.engine.endpoint, cfg.engine.token)
+    return EngineClient(cfg.engine)

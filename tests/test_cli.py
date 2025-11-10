@@ -102,15 +102,17 @@ def test_cli_main_callback_success(runner: CliRunner, mock_config_instance: Conf
     # We need to invoke a command for the callback to fully execute client init
     # Patch _execute_api_call to prevent the actual command logic from running
     with patch("enginepy.cli._execute_api_call", new_callable=AsyncMock) as mock_execute:
-        result = runner.invoke(cli, ["health"])
+        result = runner.invoke(cli, ["call", "health"])
 
     assert result.exit_code == 0
     # Check that config was loaded (mocked)
     assert enginepy.cli.cli_state["mock_load_config"].called
     # Check that client was initialized (mocked)
     assert enginepy.cli.cli_state["mock_client_class"].call_count == 1
-    assert enginepy.cli.cli_state["mock_client_class"].call_args[1]["endpoint"] == mock_config_instance.engine.endpoint
-    assert enginepy.cli.cli_state["mock_client_class"].call_args[1]["token"] == mock_config_instance.engine.token
+    # The CLI now passes the entire engine config object to the client constructor
+    call_kwargs = enginepy.cli.cli_state["mock_client_class"].call_args.kwargs
+    assert "config" in call_kwargs
+    assert call_kwargs["config"] == mock_config_instance.engine
     # Check that the client is stored in state
     assert enginepy.cli.cli_state.get("client") is mock_engine_client
     # Check that the command's execute function was called
@@ -122,7 +124,7 @@ def test_cli_main_callback_success(runner: CliRunner, mock_config_instance: Conf
 def test_cli_main_callback_config_load_failure(runner: CliRunner):
     """Test CLI exit when config loading fails."""
     with patch("enginepy.cli.config", side_effect=FileNotFoundError("Config file not found")) as mock_load_config:
-        result = runner.invoke(cli, ["health"])
+        result = runner.invoke(cli, ["call", "health"])
 
     assert result.exit_code == 1
     assert "Failed to initialize configuration or client" in result.stderr
@@ -149,7 +151,7 @@ def test_cli_main_callback_missing_engine_config(runner: CliRunner):
 
     # 4. Patch the config loader to return the modified object
     with patch("enginepy.cli.config", return_value=config_obj_to_modify):
-        result = runner.invoke(cli, ["health"])
+        result = runner.invoke(cli, ["call", "health"])
 
     assert result.exit_code == 1
     assert "Engine endpoint and token must be configured." in result.stderr
@@ -169,7 +171,7 @@ def test_cli_health_command(runner: CliRunner):
     """Test invoking the 'health' command."""
     # Patch _execute_api_call specifically for this test
     with patch("enginepy.cli._execute_api_call", new_callable=AsyncMock) as mock_execute:
-        result = runner.invoke(cli, ["health"])
+        result = runner.invoke(cli, ["call", "health"])
 
     assert result.exit_code == 0
     # Check that the patched _execute_api_call was called
@@ -182,7 +184,7 @@ def test_cli_health_command(runner: CliRunner):
 def test_cli_get_case_data_command_with_args(runner: CliRunner):
     """Test invoking 'get-case-data' with input arguments."""
     with patch("enginepy.cli._execute_api_call", new_callable=AsyncMock) as mock_execute:
-        result = runner.invoke(cli, ["get-case-data", "-i", "request_id=123"])
+        result = runner.invoke(cli, ["call", "get-case-data", "-i", "request_id=123"])
 
     assert result.exit_code == 0
     mock_execute.assert_awaited_once()
@@ -195,7 +197,7 @@ def test_cli_command_with_json_arg(runner: CliRunner):
     """Test invoking a command with a JSON string argument."""
     json_payload = '{"product": "test", "funnel": "test", "fields": [{"field": "f1", "answer": "a1"}]}'
     with patch("enginepy.cli._execute_api_call", new_callable=AsyncMock) as mock_execute:
-        result = runner.invoke(cli, ["create-request", "-i", f"enginereq={json_payload}"])
+        result = runner.invoke(cli, ["call", "create-request", "-i", f"enginereq={json_payload}"])
 
     assert result.exit_code == 0
     mock_execute.assert_awaited_once()
@@ -207,7 +209,7 @@ def test_cli_command_with_json_arg(runner: CliRunner):
 def test_cli_command_with_multiple_args(runner: CliRunner):
     """Test invoking a command with multiple -i arguments."""
     with patch("enginepy.cli._execute_api_call", new_callable=AsyncMock) as mock_execute:
-        result = runner.invoke(cli, ["update-doc", "-i", "doc_id=456", "-i", 'ocr_pages=["page1", "page2"]'])
+        result = runner.invoke(cli, ["call", "update-doc", "-i", "doc_id=456", "-i", 'ocr_pages=["page1", "page2"]'])
 
     assert result.exit_code == 0
     mock_execute.assert_awaited_once()
@@ -226,7 +228,7 @@ def test_cli_command_missing_required_arg_option(runner: CliRunner, mock_engine_
         # The client instance is created within the callback, but we use the mock fixture here.
         mock_engine_client.get_case_data = AsyncMock()
 
-        result = runner.invoke(cli, ["get-case-data"]) # No -i provided
+        result = runner.invoke(cli, ["call", "get-case-data"])  # No -i provided
 
     # Check exit code and error message (Typer exits 2 for usage errors like missing options)
     assert result.exit_code == 2

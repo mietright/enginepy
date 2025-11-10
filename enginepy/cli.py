@@ -5,18 +5,24 @@ import inspect
 import json
 import logging
 from collections.abc import Callable
+from enum import StrEnum
 from inspect import Parameter, Signature
 from typing import Annotated, Any, get_args, get_origin
 
 import pydantic
 import typer
+import yaml
 from aiohttp import ClientResponseError
+from ant31box.cmd.typer.default_config import app as default_config_app
+from rich.console import Console
+from rich.table import Table
 
 # Import the actual config loader
 from enginepy.config import config
 
 # Import the client and models
-from enginepy.engine_client import EngineClient
+from enginepy.engine_client import API_ENDPOINT_METADATA, EngineClient
+from enginepy.models import ApiEndpoint
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +40,13 @@ def _parse_json_value(param_name: str, value_str: str) -> Any:
 
 def _validate_list_type(param_name: str, args_type: tuple[Any, ...], data: list[Any]) -> list[Any]:
     """Validates specific list types (e.g., list[str], list[dict[str, str]])."""
-    if args_type == (str,):
+    item_type = args_type[0]
+
+    if item_type is str:
         if not all(isinstance(item, str) for item in data):
             raise TypeError(f"Expected a list of strings for '{param_name}'.")
         return data
-    if args_type == (dict[str, str],):
+    if item_type == dict[str, str]:
         if not all(
             isinstance(item, dict)
             and all(isinstance(k, str) for k in item)
@@ -47,6 +55,10 @@ def _validate_list_type(param_name: str, args_type: tuple[Any, ...], data: list[
         ):
             raise TypeError(f"Expected a list of dicts with string keys/values for '{param_name}'.")
         return data
+    # Handle lists of Pydantic models
+    if isinstance(item_type, type) and issubclass(item_type, pydantic.BaseModel):
+        return [item_type.model_validate(item) for item in data]
+
     # Add more list types if needed
     raise TypeError(f"Unsupported list item type {args_type} for '{param_name}'.")
 
@@ -286,11 +298,14 @@ def _create_sync_command_wrapper(
 # Use a dictionary to store state, including the client instance
 cli_state: dict[str, Any] = {}
 
-cli = typer.Typer(  # Renamed app to cli
+cli = typer.Typer(
     name="enginepy",
     help="Enginepy CLI tool to interact with the Engine API.",
     add_completion=True,  # Enable shell completion
 )
+
+call_app = typer.Typer(name="call", help="Call an Engine API endpoint directly.")
+cli.add_typer(call_app)
 
 
 # Callback runs before any command, used for setup (config, client init)
@@ -335,7 +350,7 @@ def main_callback(
 
         # Initialize client and store in state
         # Note: Client session is created on first use by BaseClient
-        client = EngineClient(endpoint=conf.engine.endpoint, token=conf.engine.token)
+        client = EngineClient(config=conf.engine)
         cli_state["client"] = client
         logger.info("EngineClient initialized for endpoint: %s", conf.engine.endpoint)
 
@@ -359,8 +374,86 @@ def create_cli_commands() -> None:
             create_command_for_method(name, method)
 
 
+class OutputFormat(StrEnum):
+    TABLE = "table"
+    JSON = "json"
+    YAML = "yaml"
+
+
+def _get_api_endpoints() -> list[ApiEndpoint]:
+    """Inspects the EngineClient and returns a list of discovered API endpoints."""
+    endpoints = []
+    exclude_methods = {
+        "__init__",
+        "set_token",
+        "headers",
+        "_url",
+        "log_request",
+        "close",
+        "action_triggers",  # Exclude wrappers
+    }
+
+    for name, _ in inspect.getmembers(EngineClient):
+        if name in API_ENDPOINT_METADATA and name not in exclude_methods and not name.startswith("_"):
+            meta = API_ENDPOINT_METADATA[name]
+            endpoints.append(
+                ApiEndpoint(
+                    command=name.replace("_", "-"),
+                    method_name=name,
+                    path=meta["path"],
+                    http_method=meta["method"],
+                    token_preferences=meta["tokens"],
+                )
+            )
+    return sorted(endpoints, key=lambda x: x.command)
+
+
+@cli.command(name="list-endpoints", help="List all available API commands and their details.")
+def list_endpoints(
+    output: Annotated[
+        OutputFormat,
+        typer.Option(
+            "--output",
+            "-o",
+            help="The output format for the endpoint list.",
+            case_sensitive=False,
+        ),
+    ] = OutputFormat.TABLE,
+) -> None:
+    """Lists all dynamically created API commands."""
+    endpoints = _get_api_endpoints()
+    if output == OutputFormat.JSON:
+        print(json.dumps([ep.model_dump() for ep in endpoints], indent=2))
+    elif output == OutputFormat.YAML:
+        print(yaml.dump([ep.model_dump() for ep in endpoints], sort_keys=False))
+    else:  # Default to table
+        console = Console()
+        table = Table(title="Available API Endpoints")
+        table.add_column("Command", style="cyan", no_wrap=True)
+        table.add_column("HTTP Method", style="yellow")
+        table.add_column("API Path", style="blue")
+        table.add_column("Client Method", style="magenta")
+        table.add_column("Token Preference (Priority)", style="green")
+
+        for endpoint in endpoints:
+            token_str = ", ".join(t.value for t in endpoint.token_preferences) if endpoint.token_preferences else "default"
+            table.add_row(
+                endpoint.command,
+                endpoint.http_method,
+                endpoint.path,
+                endpoint.method_name,
+                token_str,
+            )
+
+        console.print(table)
+
+
 def create_command_for_method(method_name: str, method_obj: Callable[..., Any]) -> None:
     """Creates and registers a single Typer command for a given EngineClient method."""
+    # Check if the method is in our exposed endpoints list
+    if method_name not in API_ENDPOINT_METADATA:
+        return
+
     method_sig = inspect.signature(method_obj)
     method_doc = inspect.getdoc(method_obj) or f"Calls the {method_name} method."
     command_name = method_name.replace("_", "-")
@@ -368,13 +461,15 @@ def create_command_for_method(method_name: str, method_obj: Callable[..., Any]) 
     # Create the synchronous wrapper which calls the async execution logic
     sync_wrapper = _create_sync_command_wrapper(method_name, method_sig, method_doc)
 
-    # Register the command with Typer
-    cli.command(name=command_name, help=method_doc)(sync_wrapper)  # Renamed app to cli
+    # Register the command with Typer under the 'call' subcommand
+    call_app.command(name=command_name, help=method_doc)(sync_wrapper)
 
 
 # --- Initialization ---
 # Create commands when the module is loaded
+cli.add_typer(default_config_app)
 create_cli_commands()
+
 
 if __name__ == "__main__":
     cli()  # Renamed app to cli
