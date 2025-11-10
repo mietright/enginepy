@@ -20,7 +20,7 @@ from rich.table import Table
 from enginepy.config import config
 
 # Import the client and models
-from enginepy.engine_client import EngineClient
+from enginepy.engine_client import API_ENDPOINT_TOKEN_PREFS, EngineClient
 from enginepy.models import ApiEndpoint
 
 logger = logging.getLogger(__name__)
@@ -373,8 +373,6 @@ class OutputFormat(StrEnum):
 def _get_api_endpoints() -> list[ApiEndpoint]:
     """Inspects the EngineClient and returns a list of discovered API endpoints."""
     endpoints = []
-    # We need an instance to access the decorated preferences
-    client_prototype = EngineClient(endpoint="dummy", token="dummy")
     exclude_methods = {
         "__init__",
         "set_token",
@@ -385,14 +383,9 @@ def _get_api_endpoints() -> list[ApiEndpoint]:
         "action_triggers",  # Exclude wrappers
     }
 
-    for name, method in inspect.getmembers(client_prototype):
-        if (
-            inspect.iscoroutinefunction(method)
-            and not name.startswith("_")
-            and name not in exclude_methods
-            and hasattr(method, "_api_endpoint_info")
-        ):
-            prefs = getattr(method, "_api_endpoint_info", [])
+    for name, _ in inspect.getmembers(EngineClient):
+        if name in API_ENDPOINT_TOKEN_PREFS and name not in exclude_methods and not name.startswith("_"):
+            prefs = API_ENDPOINT_TOKEN_PREFS[name]
             endpoints.append(
                 ApiEndpoint(
                     command=name.replace("_", "-"),
@@ -437,10 +430,8 @@ def list_endpoints(
 
 def create_command_for_method(method_name: str, method_obj: Callable[..., Any]) -> None:
     """Creates and registers a single Typer command for a given EngineClient method."""
-    # Check if the method should be exposed
-    client_prototype = EngineClient(endpoint="dummy", token="dummy")
-    method_to_check = getattr(client_prototype, method_name, None)
-    if not (method_to_check and hasattr(method_to_check, "_api_endpoint_info")):
+    # Check if the method is in our exposed endpoints list
+    if method_name not in API_ENDPOINT_TOKEN_PREFS:
         return
 
     method_sig = inspect.signature(method_obj)
