@@ -386,16 +386,31 @@ class EngineClient(BaseClient):
         resp.raise_for_status()
         return await resp.json()
 
-    def update_case_summary(self, request_id: int, summary: list[SummaryResponseOutput]) -> dict[str, Any]:
+    async def update_case_summary(self, request_id: int, summary: list[SummaryResponseOutput]) -> dict[str, Any]:
+        """
+        Updates the case summary for a given request.
+
+        Args:
+            request_id: The ID of the request to update.
+            summary: A list of summary response objects.
+
+        Returns:
+            A dictionary containing the API response.
+
+        Raises:
+            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+        """
         url = self._url(f"/api/zieb/requests/{request_id}/summary")
-        # The payload is the list directly, so we need to dump it as a JSON string
-        data = json.dumps([item.model_dump(exclude_none=True) for item in summary])
-        headers = self.headers()
-        resp = requests.post(
+        # The payload is the list of summary objects. `aiohttp` will serialize it.
+        data = [item.model_dump(exclude_none=True) for item in summary]
+        request_headers = self.headers()
+        resp = await self.session.post(
             url,
-            data=data,
-            headers=headers,
-            timeout=30,
+            json=data,
+            headers=request_headers,
+            ssl=self.ssl_mode,
+            timeout=ClientTimeout(total=30),
         )
+        await self.log_request(resp)
         resp.raise_for_status()
-        return resp.json()
+        return await resp.json()
