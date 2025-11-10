@@ -26,11 +26,27 @@ logger = logging.getLogger(__name__)
 
 
 class EngineClient(BaseClient):
-    def __init__(self, config: EngineConfigSchema) -> None:
-        # Added client_name for consistency and potential logging/tracing benefits
-        super().__init__(endpoint=config.endpoint, verify_tls=False, client_name="engine")
-        self.config = config
-        # self.ssl_mode is inherited from BaseClient and defaults based on verify_tls
+    def __init__(
+        self,
+        config: EngineConfigSchema | None = None,
+        endpoint: str | None = None,
+        token: str | None = None,
+    ) -> None:
+        if config:
+            _endpoint = config.endpoint
+            self.config = config
+        elif endpoint and token:
+            logger.warning("Initializing EngineClient with endpoint and token is deprecated. Please use a config object.")
+            _endpoint = endpoint
+            self.config = EngineConfigSchema(endpoint=endpoint, token=token)
+        else:
+            raise ValueError("Must provide either a 'config' object or 'endpoint' and 'token'.")
+
+        super().__init__(endpoint=_endpoint, verify_tls=False, client_name="engine")
+
+    @property
+    def token(self) -> str:
+        return self.config.token
 
     def set_token(self, token: str) -> None:
         """Updates the default authentication token used for subsequent requests."""
