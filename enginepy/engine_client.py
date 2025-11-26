@@ -91,7 +91,9 @@ class EngineClient(BaseClient):
             _endpoint = config.endpoint
             self.config = config
         elif endpoint and token:
-            logger.warning("Initializing EngineClient with endpoint and token is deprecated. Please use a config object.")
+            logger.warning(
+                "Initializing EngineClient with endpoint and token is deprecated. Please use a config object."
+            )
             _endpoint = endpoint
             self.config = EngineConfigSchema(endpoint=endpoint, token=token)
         else:

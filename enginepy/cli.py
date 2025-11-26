@@ -436,7 +436,9 @@ def list_endpoints(
         table.add_column("Token Preference (Priority)", style="green")
 
         for endpoint in endpoints:
-            token_str = ", ".join(t.value for t in endpoint.token_preferences) if endpoint.token_preferences else "default"
+            token_str = (
+                ", ".join(t.value for t in endpoint.token_preferences) if endpoint.token_preferences else "default"
+            )
             table.add_row(
                 endpoint.command,
                 endpoint.http_method,
