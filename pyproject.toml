@@ -26,6 +26,7 @@ enginepy = "enginepy.cli:cli"
 
 [dependency-groups]
 dev = [
+"ruff",
     "aioresponses",
     "pyreadline",
     "pylint-pydantic",
