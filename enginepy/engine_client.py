@@ -19,6 +19,7 @@ from enginepy.models import (
     EngineRequest,
     EngineTokenName,
     EngineTrigger,
+    RequestDocumentsResponse,
 )
 from enginepy.telli.models import TelliWebhook
 
@@ -76,6 +77,11 @@ API_ENDPOINT_METADATA: dict[str, dict[str, Any]] = {
         "tokens": [EngineTokenName.ADMIN],
         "path": "/api/case_summaries/{request_id}",
         "method": "POST",
+    },
+    "get_request_documents": {
+        "tokens": [EngineTokenName.ADMIN],
+        "path": "/api/admin/requests/{request_id}/documents.json",
+        "method": "GET",
     },
 }
 
@@ -216,6 +222,34 @@ class EngineClient(BaseClient):
         await self.log_request(resp)
         resp.raise_for_status()
         return await resp.json()
+
+    async def get_request_documents(self, request_id: int) -> RequestDocumentsResponse:
+        """
+        Retrieves documents and a presigned post URL for a specific request.
+
+        Args:
+            request_id: The ID of the request for which to retrieve documents.
+
+        Returns:
+            A RequestDocumentsResponse object containing request files and S3 presigned post data.
+
+        Raises:
+            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            pydantic.ValidationError: If the response data fails validation.
+        """
+        path = f"/api/admin/requests/{request_id}/documents.json"
+        token = self._get_token(API_ENDPOINT_METADATA["get_request_documents"]["tokens"])
+        request_headers = self.headers(token=token)
+        resp = await self.session.get(
+            self._url(path),
+            headers=request_headers,
+            ssl=self.ssl_mode,
+            timeout=ClientTimeout(total=30),
+        )
+        await self.log_request(resp)
+        resp.raise_for_status()
+        data = await resp.json()
+        return RequestDocumentsResponse.model_validate(data)
 
     async def get_case_data_all(
         self, request_id: int, with_summary: bool = False, with_wwm: bool = True

@@ -277,6 +277,63 @@ class EngineResponse(BaseModel):
     triggers: list[EngineTrigger] = Field(default=[])
 
 
+class RequestDocumentFile(BaseModel):
+    id: int
+    physical_mails: list[Any]
+    type: str
+    image: bool
+    pdf: bool
+    filename: str
+    incoming: bool
+    uncategorized: bool
+    edit_url: str
+    approved: bool
+    attachment: bool
+    created_at: datetime
+    court_processing_kind: Any | None = None
+    type_title: str
+    approved_at: str
+    uploaded_by: str
+    approved_by: str
+    created_at_text: str
+    approved_at_text: str
+    sensitive: bool
+    eb_date: Any | None = None
+    court_id: int | None = None
+    court_type: bool
+    file_extension: str
+    court_attachment: bool
+    original_size: int
+    size: str
+
+
+class RequestForDocuments(BaseModel):
+    id: int
+    files: list[RequestDocumentFile]
+
+
+class S3Data(BaseModel):
+    key: str
+    success_action_status: str
+    acl: str
+    policy: str
+    x_amz_credential: str = Field(alias="x-amz-credential")
+    x_amz_algorithm: str = Field(alias="x-amz-algorithm")
+    x_amz_date: str = Field(alias="x-amz-date")
+    x_amz_signature: str = Field(alias="x-amz-signature")
+
+
+class PresignedPost(BaseModel):
+    s3_data: S3Data = Field(alias="s3-data")
+    s3_url: str = Field(alias="s3-url")
+    s3_host: str = Field(alias="s3-host")
+
+
+class RequestDocumentsResponse(BaseModel):
+    request: RequestForDocuments
+    presigned_post: PresignedPost
+
+
 class ActionTrigger(BaseModel):
     trigger_id: str = Field(...)
     name: str = Field(...)
