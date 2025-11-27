@@ -27,6 +27,7 @@ from enginepy.models import (
     EngineTypeEnum,
     ManagerEnum,
     OutputFormatEnum,
+    RequestDocumentsResponse,
     WithContentMode,
 )
 from enginepy.telli.models import TelliWebhook
@@ -642,6 +643,100 @@ async def test_scheduled_call_response_failure(client: EngineClient, test_endpoi
         with pytest.raises(ClientResponseError) as exc_info:
             await client.scheduled_call_response(mock_event)
         assert exc_info.value.status == 400
+
+
+@pytest.mark.asyncio
+async def test_get_request_documents_success(
+    client: EngineClient, test_endpoint: str, test_token: str, request_id: int, expected_user_agent: str
+):
+    """Test successful retrieval of request documents."""
+    expected_path = f"/api/admin/requests/{request_id}/documents.json"
+    expected_url = f"{test_endpoint}{expected_path}"
+    response_payload = {
+        "request": {
+            "id": request_id,
+            "files": [
+                {
+                    "id": 2469711,
+                    "physical_mails": [],
+                    "type": "IN_Erfolgs_Vereinbarung bei Mietsenkung_en",
+                    "image": False,
+                    "pdf": True,
+                    "filename": "Erfolgs-Vereinbarung bei Mietsenkung_English.pdf",
+                    "incoming": False,
+                    "uncategorized": False,
+                    "edit_url": f"/admin/requests/{request_id}/zieb?document_id=2469711",
+                    "approved": True,
+                    "attachment": False,
+                    "created_at": "2025-11-26T15:01:36.778Z",
+                    "court_processing_kind": None,
+                    "type_title": "IN_Erfolgs_Vereinbarung bei Mietsenkung_en",
+                    "approved_at": "Mittwoch, 26. November 2025, 16:01 Uhr",
+                    "uploaded_by": "00 Mietright Zentrale",
+                    "approved_by": "00 Mietright Zentrale",
+                    "created_at_text": "etwa 20 Stunden",
+                    "approved_at_text": "Mittwoch, 26. November 2025, 16:01 Uhr",
+                    "sensitive": False,
+                    "eb_date": None,
+                    "court_id": None,
+                    "court_type": False,
+                    "file_extension": "pdf",
+                    "court_attachment": False,
+                    "original_size": 78920,
+                    "size": "77,1 KB",
+                }
+            ],
+        },
+        "presigned_post": {
+            "s3-data": {
+                "key": f"requests/{request_id}/files/some-uuid/${{filename}}",
+                "success_action_status": "201",
+                "acl": "private",
+                "policy": "some-policy",
+                "x-amz-credential": "some-credential",
+                "x-amz-algorithm": "AWS4-HMAC-SHA256",
+                "x-amz-date": "20251127T112143Z",
+                "x-amz-signature": "some-signature",
+            },
+            "s3-url": "https://some.s3.url.com",
+            "s3-host": "some.s3.host.com",
+        },
+    }
+
+    with aioresponses() as m:
+        m.get(expected_url, status=200, payload=response_payload)
+        response = await client.get_request_documents(request_id)
+        assert isinstance(response, RequestDocumentsResponse)
+        assert response.request.id == request_id
+        assert len(response.request.files) == 1
+        assert response.request.files[0].id == 2469711
+        assert response.presigned_post.s3_url == "https://some.s3.url.com"
+
+        expected_timeout = ClientTimeout(total=30)
+        expected_headers = {
+            "Accept": "*/*",
+            "token": test_token,
+            "User-Agent": expected_user_agent,
+            "Content-Type": "application/json",
+        }
+        m.assert_called_once_with(
+            expected_url,
+            method="GET",
+            headers=expected_headers,
+            ssl=False,
+            timeout=expected_timeout,
+        )
+
+
+@pytest.mark.asyncio
+async def test_get_request_documents_failure(client: EngineClient, test_endpoint: str, request_id: int):
+    """Test failed retrieval of request documents."""
+    expected_url = f"{test_endpoint}/api/admin/requests/{request_id}/documents.json"
+    with aioresponses() as m:
+        m.get(expected_url, status=404)
+        with pytest.raises(ClientResponseError) as exc_info:
+            await client.get_request_documents(request_id)
+        assert exc_info.value.status == 404
 
 
 # TODO: Add tests verifying specific header content (e.g., token, content-type) more explicitly if needed.
