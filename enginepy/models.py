@@ -314,6 +314,12 @@ class RequestForDocuments(BaseModel):
     )
 
 
+class DocumentUrlResponse(BaseModel):
+    """Represents the JSON response for a document URL."""
+
+    url: str = Field(..., description="The presigned URL for the document.")
+
+
 class S3Data(BaseModel):
     key: str | None = Field(default=None, description="The key for the new object in S3.")
     success_action_status: str | None = Field(default=None, description="Status code to return on successful upload.")

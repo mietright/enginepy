@@ -30,6 +30,7 @@ from enginepy.models import (
     RequestDocumentsResponse,
     WithContentMode,
 )
+from enginepy.models import DocumentUrlResponse
 from enginepy.telli.models import TelliWebhook
 
 
@@ -732,6 +733,69 @@ async def test_get_request_documents_failure(client: EngineClient, test_endpoint
         with pytest.raises(ClientResponseError) as exc_info:
             await client.get_request_documents(request_id)
         assert exc_info.value.status == 404
+
+
+@pytest.mark.asyncio
+async def test_get_document_json_success(
+    client: EngineClient, test_endpoint: str, test_token: str, doc_id: int, expected_user_agent: str
+):
+    """Test successfully retrieving a document URL as JSON."""
+    expected_path = f"/api/admin/documents/{doc_id}"
+    expected_url = f"{test_endpoint}{expected_path}"
+    presigned_url = "https://s3.example.com/some/file.pdf?sig=123"
+    response_payload = {"url": presigned_url}
+
+    with aioresponses() as m:
+        m.get(expected_url, status=200, payload=response_payload)
+        response = await client.get_document(doc_id, download=False)
+        assert isinstance(response, DocumentUrlResponse)
+        assert response.url == presigned_url
+
+        expected_timeout = ClientTimeout(total=30)
+        expected_headers = {
+            "Accept": "application/json",
+            "token": test_token,
+            "User-Agent": expected_user_agent,
+            "Content-Type": "application/json",
+        }
+        m.assert_called_once_with(
+            expected_url,
+            method="GET",
+            headers=expected_headers,
+            ssl=False,
+            timeout=expected_timeout,
+        )
+
+
+@pytest.mark.asyncio
+async def test_get_document_download_success(
+    client: EngineClient, test_endpoint: str, test_token: str, doc_id: int, expected_user_agent: str
+):
+    """Test successfully downloading a document file."""
+    api_path = f"/api/admin/documents/{doc_id}"
+    api_url = f"{test_endpoint}{api_path}"
+    s3_url = "https://s3.example.com/some/file.pdf?sig=123"
+    file_content = b"This is a test PDF content."
+
+    with aioresponses() as m:
+        # Mock the initial API call which should redirect
+        m.get(api_url, status=302, headers={"Location": s3_url})
+        # Mock the S3 URL that the client will be redirected to
+        m.get(s3_url, status=200, body=file_content)
+
+        response_file = await client.get_document(doc_id, download=True)
+        assert response_file.read() == file_content
+        response_file.close()
+
+        # Verify the initial call to the engine API
+        expected_headers = {
+            "Accept": "*/*",
+            "token": test_token,
+            "User-Agent": expected_user_agent,
+        }
+        assert len(m.requests) == 2
+        engine_call = m.requests[("GET", client._url(api_path))]
+        assert engine_call[0].kwargs["headers"] == expected_headers
 
 
 # TODO: Add tests verifying specific header content (e.g., token, content-type) more explicitly if needed.
