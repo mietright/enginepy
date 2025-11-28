@@ -299,7 +299,7 @@ class RequestDocumentFile(BaseModel):
     approved_at_text: str | None = Field(default=None, description="Human-readable approval time.")
     sensitive: bool | None = Field(default=None, description="Indicates if the document contains sensitive information.")
     eb_date: Any | None = Field(default=None, description="EB date associated with the document.")
-    court_id: int | None = Field(default=None, description="Identifier for the court.")
+    court_id: Any | None = Field(default=None, description="Identifier for the court.")
     court_type: bool | None = Field(default=None, description="Indicates the type of court.")
     file_extension: str | None = Field(default=None, description="The file extension.")
     court_attachment: bool | None = Field(default=None, description="Indicates if it is a court attachment.")
@@ -308,32 +308,32 @@ class RequestDocumentFile(BaseModel):
 
 
 class RequestForDocuments(BaseModel):
-    id: int = Field(..., description="The ID of the request.")
+    id: int | None = Field(default=None, description="The ID of the request.")
     files: list[RequestDocumentFile] = Field(
         default_factory=list, description="A list of document files associated with the request."
     )
 
 
 class S3Data(BaseModel):
-    key: str = Field(..., description="The key for the new object in S3.")
-    success_action_status: str = Field(..., description="Status code to return on successful upload.")
-    acl: str = Field(..., description="Access control list for the new object.")
-    policy: str = Field(..., description="The S3 policy for the upload.")
-    x_amz_credential: str = Field(..., alias="x-amz-credential", description="AWS credential.")
-    x_amz_algorithm: str = Field(..., alias="x-amz-algorithm", description="AWS algorithm used for signing.")
-    x_amz_date: str = Field(..., alias="x-amz-date", description="Date of the request.")
-    x_amz_signature: str = Field(..., alias="x-amz-signature", description="Signature for the request.")
+    key: str | None = Field(default=None, description="The key for the new object in S3.")
+    success_action_status: str | None = Field(default=None, description="Status code to return on successful upload.")
+    acl: str | None = Field(default=None, description="Access control list for the new object.")
+    policy: str | None = Field(default=None, description="The S3 policy for the upload.")
+    x_amz_credential: str | None = Field(default=None, alias="x-amz-credential", description="AWS credential.")
+    x_amz_algorithm: str | None = Field(default=None, alias="x-amz-algorithm", description="AWS algorithm used for signing.")
+    x_amz_date: str | None = Field(default=None, alias="x-amz-date", description="Date of the request.")
+    x_amz_signature: str | None = Field(default=None, alias="x-amz-signature", description="Signature for the request.")
 
 
 class PresignedPost(BaseModel):
-    s3_data: S3Data = Field(..., alias="s3-data", description="S3 data for the presigned post.")
-    s3_url: str = Field(..., alias="s3-url", description="The URL to post the file to.")
-    s3_host: str = Field(..., alias="s3-host", description="The host for the S3 bucket.")
+    s3_data: S3Data | None = Field(default=None, alias="s3-data", description="S3 data for the presigned post.")
+    s3_url: str | None = Field(default=None, alias="s3-url", description="The URL to post the file to.")
+    s3_host: str | None = Field(default=None, alias="s3-host", description="The host for the S3 bucket.")
 
 
 class RequestDocumentsResponse(BaseModel):
-    request: RequestForDocuments = Field(..., description="Information about the request and its documents.")
-    presigned_post: PresignedPost = Field(..., description="Presigned post data for uploading files to S3.")
+    request: RequestForDocuments | None = Field(default=None, description="Information about the request and its documents.")
+    presigned_post: PresignedPost | None = Field(default=None, description="Presigned post data for uploading files to S3.")
 
 
 class ActionTrigger(BaseModel):
