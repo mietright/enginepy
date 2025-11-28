@@ -305,7 +305,7 @@ class EngineClient(BaseClient):
             logger.warning("The final URL after redirect does not seem to be a file storage URL: %s", resp.url)
 
         # SpooledTemporaryFile will use memory up to 1MB, then switch to disk.
-        tmp_file = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")
+        tmp_file = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")  # noqa: SIM115
         async for chunk in resp.content.iter_chunked(8192):
             tmp_file.write(chunk)
         tmp_file.seek(0)
