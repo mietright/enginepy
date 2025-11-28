@@ -162,7 +162,13 @@ class EngineClient(BaseClient):
         if extra is not None:
             headers_dict.update(extra)
         # Ensure the base headers (like User-Agent) are included
-        return super().headers(content_type=content_type, extra=headers_dict)
+        # Let the super method handle content_type unless it's explicitly None
+        base_headers = super().headers(content_type=content_type, extra=headers_dict)
+
+        if content_type is None and "Content-Type" in base_headers:
+            del base_headers["Content-Type"]
+
+        return base_headers
 
     async def update_doc(self, doc_id: int, ocr_pages: list[str], searchable_pdf: str = "") -> bool:
         """

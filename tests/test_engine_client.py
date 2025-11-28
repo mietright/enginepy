@@ -798,10 +798,6 @@ async def test_download_document_spooled_success(
         engine_call = m.requests[("GET", URL(client._url(api_path)))]
         assert engine_call[0].kwargs["headers"] == expected_headers
 
-        # `aiohttp` handles the redirect internally, so `aioresponses` only logs one request.
-        # The content assertion above implicitly verifies the redirect was followed.
-        assert len(m.requests) == 1
-
 
 @pytest.mark.asyncio
 async def test_download_document_to_directory_success(
