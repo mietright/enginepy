@@ -4,6 +4,7 @@
 import asyncio
 import json
 import logging
+import os
 from tempfile import SpooledTemporaryFile
 from typing import Any, Literal
 
@@ -287,21 +288,23 @@ class EngineClient(BaseClient):
         data = await resp.json()
         return DocumentUrlResponse.model_validate(data)
 
-    async def download_document(self, document_id: int, filepath: str | None = None) -> SpooledTemporaryFile | None:
+    async def download_document(self, document_id: int, filepath: str | None = None) -> SpooledTemporaryFile | str | None:
         """
         Downloads a document's content.
 
-        If a filepath is provided, the content is written to that file and the method returns None.
-        If no filepath is provided, the content is written to a SpooledTemporaryFile in memory/disk
-        and the file object is returned.
+        If a filepath is provided, the content is written to that file.
+        - If filepath is a directory, the filename is determined from the response headers and the full path is returned.
+        - If filepath is a full path, the file is saved there and None is returned.
+        If no filepath is provided, a SpooledTemporaryFile is returned.
 
         Args:
             document_id: The ID of the document to download.
             filepath: Optional path to save the document to.
 
         Returns:
-            A SpooledTemporaryFile if no filepath is given, otherwise None.
-            The caller is responsible for closing the returned file object.
+            - A SpooledTemporaryFile if no filepath is given (caller must close).
+            - The full path to the saved file if filepath was a directory.
+            - None if filepath was a full file path.
 
         Raises:
             aiohttp.ClientResponseError: If the API or the redirected download fails.
@@ -326,9 +329,18 @@ class EngineClient(BaseClient):
         content = await resp.read()
 
         if filepath:
-            async with aiofiles.open(filepath, "wb") as f:
+            if os.path.isdir(filepath):
+                filename = "downloaded_file"  # Default filename
+                if resp.content_disposition and resp.content_disposition.filename:
+                    filename = resp.content_disposition.filename
+                output_path = os.path.join(filepath, filename)
+            else:
+                output_path = filepath
+
+            async with aiofiles.open(output_path, "wb") as f:
                 await f.write(content)
-            return None
+
+            return output_path if os.path.isdir(filepath) else None
 
         tmp_file = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")  # noqa: SIM115
         tmp_file.write(content)

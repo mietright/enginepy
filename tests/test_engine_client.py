@@ -769,10 +769,10 @@ async def test_get_document_json_success(
 
 
 @pytest.mark.asyncio
-async def test_get_document_download_success(
+async def test_download_document_success(
     client: EngineClient, test_endpoint: str, test_token: str, doc_id: int, expected_user_agent: str
 ):
-    """Test successfully downloading a document file."""
+    """Test successfully downloading a document file to a SpooledTemporaryFile."""
     api_path = f"/api/admin/documents/{doc_id}"
     api_url = f"{test_endpoint}{api_path}"
     s3_url = "https://s3.example.com/some/file.pdf?sig=123"
@@ -797,6 +797,31 @@ async def test_get_document_download_success(
         assert len(m.requests) == 2
         engine_call = m.requests[("GET", client._url(api_path))]
         assert engine_call[0].kwargs["headers"] == expected_headers
+
+
+@pytest.mark.asyncio
+async def test_download_document_to_directory_success(
+    client: EngineClient, test_endpoint: str, doc_id: int, tmp_path: os.PathLike
+):
+    """Test successfully downloading a document to a directory, inferring filename."""
+    api_path = f"/api/admin/documents/{doc_id}"
+    api_url = f"{test_endpoint}{api_path}"
+    s3_url = "https://s3.example.com/some/file.pdf?sig=789"
+    file_content = b"This is content for a directory download."
+    filename = "inferred_document.pdf"
+
+    with aioresponses() as m:
+        m.get(api_url, status=302, headers={"Location": s3_url})
+        m.get(s3_url, status=200, body=file_content, headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+        # Pass the directory path to the client
+        returned_path = await client.download_document(doc_id, filepath=str(tmp_path))
+
+        expected_output_path = os.path.join(tmp_path, filename)
+        assert returned_path == expected_output_path
+        assert os.path.exists(expected_output_path)
+        with open(expected_output_path, "rb") as f:
+            assert f.read() == file_content
 
 
 @pytest.mark.asyncio
