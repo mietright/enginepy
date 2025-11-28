@@ -7,6 +7,7 @@ import logging
 from tempfile import SpooledTemporaryFile
 from typing import Any, Literal
 
+import aiofiles
 from aiohttp.client import ClientTimeout
 from ant31box.client.base import BaseClient
 
@@ -286,15 +287,21 @@ class EngineClient(BaseClient):
         data = await resp.json()
         return DocumentUrlResponse.model_validate(data)
 
-    async def download_document(self, document_id: int) -> SpooledTemporaryFile:
+    async def download_document(self, document_id: int, filepath: str | None = None) -> SpooledTemporaryFile | None:
         """
-        Downloads a document's content into a temporary file.
+        Downloads a document's content.
+
+        If a filepath is provided, the content is written to that file and the method returns None.
+        If no filepath is provided, the content is written to a SpooledTemporaryFile in memory/disk
+        and the file object is returned.
 
         Args:
             document_id: The ID of the document to download.
+            filepath: Optional path to save the document to.
 
         Returns:
-            A SpooledTemporaryFile containing the document's content. The caller is responsible for closing it.
+            A SpooledTemporaryFile if no filepath is given, otherwise None.
+            The caller is responsible for closing the returned file object.
 
         Raises:
             aiohttp.ClientResponseError: If the API or the redirected download fails.
@@ -316,8 +323,18 @@ class EngineClient(BaseClient):
         if "s3" not in str(resp.url):
             logger.warning("The final URL after redirect does not seem to be a file storage URL: %s", resp.url)
 
+        if "s3" not in str(resp.url):
+            logger.warning("The final URL after redirect does not seem to be a file storage URL: %s", resp.url)
+
+        if filepath:
+            async with aiofiles.open(filepath, "wb") as f:
+                async for chunk in resp.content.iter_chunked(8192):
+                    await f.write(chunk)
+            return None
+
         tmp_file = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")  # noqa: SIM115
-        tmp_file.write(await resp.read())
+        async for chunk in resp.content.iter_chunked(8192):
+            tmp_file.write(chunk)
         tmp_file.seek(0)
         return tmp_file
 
