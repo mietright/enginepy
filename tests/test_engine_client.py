@@ -747,7 +747,7 @@ async def test_get_document_json_success(
 
     with aioresponses() as m:
         m.get(expected_url, status=200, payload=response_payload)
-        response = await client.get_document(doc_id, download=False)
+        response = await client.get_document_url(doc_id)
         assert isinstance(response, DocumentUrlResponse)
         assert response.url == presigned_url
 
@@ -783,7 +783,7 @@ async def test_get_document_download_success(
         # Mock the S3 URL that the client will be redirected to
         m.get(s3_url, status=200, body=file_content)
 
-        response_file = await client.get_document(doc_id, download=True)
+        response_file = await client.download_document(doc_id)
         assert response_file.read() == file_content
         response_file.close()
 

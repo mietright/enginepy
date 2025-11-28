@@ -85,7 +85,12 @@ API_ENDPOINT_METADATA: dict[str, dict[str, Any]] = {
         "path": "/api/admin/requests/{request_id}/documents.json",
         "method": "GET",
     },
-    "get_document": {
+    "get_document_url": {
+        "tokens": [EngineTokenName.ADMIN],
+        "path": "/api/admin/documents/{document_id}",
+        "method": "GET",
+    },
+    "download_document": {
         "tokens": [EngineTokenName.ADMIN],
         "path": "/api/admin/documents/{document_id}",
         "method": "GET",
@@ -257,57 +262,62 @@ class EngineClient(BaseClient):
         data = await resp.json()
         return RequestDocumentsResponse.model_validate(data)
 
-    async def get_document(
-        self, document_id: int, download: bool = False
-    ) -> DocumentUrlResponse | SpooledTemporaryFile:
+    async def get_document_url(self, document_id: int) -> DocumentUrlResponse:
         """
-        Retrieves a document, either as a URL or as a downloaded file.
+        Retrieves a presigned URL for a document.
 
         Args:
             document_id: The ID of the document to retrieve.
-            download: If False (default), returns a JSON object with a presigned URL.
-                      If True, downloads the file and returns it as a SpooledTemporaryFile.
 
         Returns:
-            A DocumentUrlResponse object or a SpooledTemporaryFile.
+            A DocumentUrlResponse object containing the presigned URL.
 
         Raises:
             aiohttp.ClientResponseError: If the API returns an error status.
         """
         path = f"/api/admin/documents/{document_id}"
-        token = self._get_token(API_ENDPOINT_METADATA["get_document"]["tokens"])
+        token = self._get_token(API_ENDPOINT_METADATA["get_document_url"]["tokens"])
+        headers = self.headers(token=token, extra={"Accept": "application/json"})
+        resp = await self.session.get(
+            self._url(path), headers=headers, ssl=self.ssl_mode, timeout=ClientTimeout(total=30)
+        )
+        await self.log_request(resp)
+        resp.raise_for_status()
+        data = await resp.json()
+        return DocumentUrlResponse.model_validate(data)
 
-        if not download:
-            headers = self.headers(token=token, extra={"Accept": "application/json"})
-            resp = await self.session.get(
-                self._url(path), headers=headers, ssl=self.ssl_mode, timeout=ClientTimeout(total=30)
-            )
-            await self.log_request(resp)
-            resp.raise_for_status()
-            data = await resp.json()
-            return DocumentUrlResponse.model_validate(data)
+    async def download_document(self, document_id: int) -> SpooledTemporaryFile:
+        """
+        Downloads a document's content into a temporary file.
 
-        # Download the file content
+        Args:
+            document_id: The ID of the document to download.
+
+        Returns:
+            A SpooledTemporaryFile containing the document's content. The caller is responsible for closing it.
+
+        Raises:
+            aiohttp.ClientResponseError: If the API or the redirected download fails.
+        """
+        path = f"/api/admin/documents/{document_id}"
+        token = self._get_token(API_ENDPOINT_METADATA["download_document"]["tokens"])
         headers = self.headers(token=token, content_type=None)
-        # aiohttp does not follow redirects by default on GET. The API should redirect to S3.
+
         resp = await self.session.get(
             self._url(path),
             headers=headers,
             ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),
+            timeout=ClientTimeout(total=300),  # Increased timeout for downloads
             allow_redirects=True,
         )
         await self.log_request(resp)
         resp.raise_for_status()
 
-        # Check if the final URL is from S3 (or similar blob storage)
         if "s3" not in str(resp.url):
             logger.warning("The final URL after redirect does not seem to be a file storage URL: %s", resp.url)
 
-        # SpooledTemporaryFile will use memory up to 1MB, then switch to disk.
         tmp_file = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")  # noqa: SIM115
-        async for chunk in resp.content.iter_chunked(8192):
-            tmp_file.write(chunk)
+        tmp_file.write(await resp.read())
         tmp_file.seek(0)
         return tmp_file
 
