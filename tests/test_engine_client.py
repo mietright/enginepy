@@ -80,17 +80,12 @@ async def client(test_endpoint: str, test_token: str) -> AsyncIterator[EngineCli
 
 
 @pytest.mark.asyncio
-async def test_set_token(client: EngineClient, test_token: str, caplog):
+async def test_set_token(client: EngineClient, test_token: str):
     """Test that set_token updates the client's token."""
     assert client.token == test_token
     new_token = "a-different-token"
     client.set_token(new_token)
     assert client.token == new_token
-
-    # Verify that the new token is logged when headers are created
-    with caplog.at_level("INFO"):
-        client.headers()
-        assert f"Using token: {new_token}" in caplog.text
 
 
 @pytest.mark.asyncio

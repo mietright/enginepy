@@ -140,7 +140,6 @@ class EngineClient(BaseClient):
         token: str | None = None,
     ) -> dict[str, str]:
         _token = token or self.config.token
-        logger.info("Using token: %s", _token)
         headers_dict = {
             "Accept": "*/*",
             "token": _token,
