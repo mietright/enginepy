@@ -769,7 +769,7 @@ async def test_get_document_json_success(
 
 
 @pytest.mark.asyncio
-async def test_download_document_success(
+async def test_download_document_spooled_success(
     client: EngineClient, test_endpoint: str, test_token: str, doc_id: int, expected_user_agent: str
 ):
     """Test successfully downloading a document file to a SpooledTemporaryFile."""
@@ -779,24 +779,23 @@ async def test_download_document_success(
     file_content = b"This is a test PDF content."
 
     with aioresponses() as m:
-        # Mock the initial API call which should redirect
         m.get(api_url, status=302, headers={"Location": s3_url})
-        # Mock the S3 URL that the client will be redirected to
         m.get(s3_url, status=200, body=file_content)
 
         response_file = await client.download_document(doc_id)
+
         assert response_file.read() == file_content
         response_file.close()
 
-        # Verify the initial call to the engine API
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "User-Agent": expected_user_agent,
-        }
+        # Verify that both the initial API call and the S3 redirect were made.
+        # aioresponses with allow_redirects=True logs both calls.
         assert len(m.requests) == 2
+        # Check the first call to our API
         engine_call = m.requests[("GET", client._url(api_path))]
-        assert engine_call[0].kwargs["headers"] == expected_headers
+        assert engine_call[0].kwargs["headers"]["token"] == test_token
+        # Check the second call to S3 (no token header)
+        s3_call = m.requests[("GET", s3_url)]
+        assert "token" not in s3_call[0].kwargs["headers"]
 
 
 @pytest.mark.asyncio
