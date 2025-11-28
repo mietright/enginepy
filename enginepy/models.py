@@ -278,60 +278,62 @@ class EngineResponse(BaseModel):
 
 
 class RequestDocumentFile(BaseModel):
-    id: int
-    physical_mails: list[Any]
-    type: str
-    image: bool
-    pdf: bool
-    filename: str
-    incoming: bool
-    uncategorized: bool
-    edit_url: str
-    approved: bool
-    attachment: bool
-    created_at: datetime
-    court_processing_kind: Any | None = None
-    type_title: str
-    approved_at: str
-    uploaded_by: str
-    approved_by: str
-    created_at_text: str
-    approved_at_text: str
-    sensitive: bool
-    eb_date: Any | None = None
-    court_id: int | None = None
-    court_type: bool
-    file_extension: str
-    court_attachment: bool
-    original_size: int
-    size: str
+    id: int = Field(..., description="Unique identifier for the document file.")
+    physical_mails: list[Any] = Field(default_factory=list, description="List of physical mails related to the document.")
+    type: str | None = Field(default=None, description="Type of the document.")
+    image: bool | None = Field(default=None, description="Indicates if the document is an image.")
+    pdf: bool | None = Field(default=None, description="Indicates if the document is a PDF.")
+    filename: str | None = Field(default=None, description="The name of the file.")
+    incoming: bool | None = Field(default=None, description="Indicates if the document is incoming.")
+    uncategorized: bool | None = Field(default=None, description="Indicates if the document is uncategorized.")
+    edit_url: str | None = Field(default=None, description="URL for editing the document.")
+    approved: bool | None = Field(default=None, description="Indicates if the document has been approved.")
+    attachment: bool | None = Field(default=None, description="Indicates if the document is an attachment.")
+    created_at: datetime | None = Field(default=None, description="Timestamp of document creation.")
+    court_processing_kind: Any | None = Field(default=None, description="Kind of court processing.")
+    type_title: str | None = Field(default=None, description="Title for the document type.")
+    approved_at: str | None = Field(default=None, description="Timestamp of approval.")
+    uploaded_by: str | None = Field(default=None, description="User who uploaded the file.")
+    approved_by: str | None = Field(default=None, description="User who approved the document.")
+    created_at_text: str | None = Field(default=None, description="Human-readable creation time.")
+    approved_at_text: str | None = Field(default=None, description="Human-readable approval time.")
+    sensitive: bool | None = Field(default=None, description="Indicates if the document contains sensitive information.")
+    eb_date: Any | None = Field(default=None, description="EB date associated with the document.")
+    court_id: int | None = Field(default=None, description="Identifier for the court.")
+    court_type: bool | None = Field(default=None, description="Indicates the type of court.")
+    file_extension: str | None = Field(default=None, description="The file extension.")
+    court_attachment: bool | None = Field(default=None, description="Indicates if it is a court attachment.")
+    original_size: int | None = Field(default=None, description="Original file size in bytes.")
+    size: str | None = Field(default=None, description="Human-readable file size.")
 
 
 class RequestForDocuments(BaseModel):
-    id: int
-    files: list[RequestDocumentFile]
+    id: int = Field(..., description="The ID of the request.")
+    files: list[RequestDocumentFile] = Field(
+        default_factory=list, description="A list of document files associated with the request."
+    )
 
 
 class S3Data(BaseModel):
-    key: str
-    success_action_status: str
-    acl: str
-    policy: str
-    x_amz_credential: str = Field(alias="x-amz-credential")
-    x_amz_algorithm: str = Field(alias="x-amz-algorithm")
-    x_amz_date: str = Field(alias="x-amz-date")
-    x_amz_signature: str = Field(alias="x-amz-signature")
+    key: str = Field(..., description="The key for the new object in S3.")
+    success_action_status: str = Field(..., description="Status code to return on successful upload.")
+    acl: str = Field(..., description="Access control list for the new object.")
+    policy: str = Field(..., description="The S3 policy for the upload.")
+    x_amz_credential: str = Field(..., alias="x-amz-credential", description="AWS credential.")
+    x_amz_algorithm: str = Field(..., alias="x-amz-algorithm", description="AWS algorithm used for signing.")
+    x_amz_date: str = Field(..., alias="x-amz-date", description="Date of the request.")
+    x_amz_signature: str = Field(..., alias="x-amz-signature", description="Signature for the request.")
 
 
 class PresignedPost(BaseModel):
-    s3_data: S3Data = Field(alias="s3-data")
-    s3_url: str = Field(alias="s3-url")
-    s3_host: str = Field(alias="s3-host")
+    s3_data: S3Data = Field(..., alias="s3-data", description="S3 data for the presigned post.")
+    s3_url: str = Field(..., alias="s3-url", description="The URL to post the file to.")
+    s3_host: str = Field(..., alias="s3-host", description="The host for the S3 bucket.")
 
 
 class RequestDocumentsResponse(BaseModel):
-    request: RequestForDocuments
-    presigned_post: PresignedPost
+    request: RequestForDocuments = Field(..., description="Information about the request and its documents.")
+    presigned_post: PresignedPost = Field(..., description="Presigned post data for uploading files to S3.")
 
 
 class ActionTrigger(BaseModel):
