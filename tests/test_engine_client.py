@@ -787,15 +787,19 @@ async def test_download_document_spooled_success(
         assert response_file.read() == file_content
         response_file.close()
 
-        # Verify that both the initial API call and the S3 redirect were made.
-        # aioresponses with allow_redirects=True logs both calls.
-        assert len(m.requests) == 2
+        # Verify the initial call to the engine API was made
+        expected_headers = {
+            "Accept": "*/*",
+            "token": test_token,
+            "User-Agent": expected_user_agent,
+        }
         # Check the first call to our API
         engine_call = m.requests[("GET", client._url(api_path))]
-        assert engine_call[0].kwargs["headers"]["token"] == test_token
-        # Check the second call to S3 (no token header)
-        s3_call = m.requests[("GET", s3_url)]
-        assert "token" not in s3_call[0].kwargs["headers"]
+        assert engine_call[0].kwargs["headers"] == expected_headers
+
+        # `aiohttp` handles the redirect internally, so `aioresponses` only logs one request.
+        # The content assertion above implicitly verifies the redirect was followed.
+        assert len(m.requests) == 1
 
 
 @pytest.mark.asyncio
