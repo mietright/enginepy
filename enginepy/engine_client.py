@@ -323,18 +323,15 @@ class EngineClient(BaseClient):
         if "s3" not in str(resp.url):
             logger.warning("The final URL after redirect does not seem to be a file storage URL: %s", resp.url)
 
-        if "s3" not in str(resp.url):
-            logger.warning("The final URL after redirect does not seem to be a file storage URL: %s", resp.url)
+        content = await resp.read()
 
         if filepath:
             async with aiofiles.open(filepath, "wb") as f:
-                async for chunk in resp.content.iter_chunked(8192):
-                    await f.write(chunk)
+                await f.write(content)
             return None
 
         tmp_file = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")  # noqa: SIM115
-        async for chunk in resp.content.iter_chunked(8192):
-            tmp_file.write(chunk)
+        tmp_file.write(content)
         tmp_file.seek(0)
         return tmp_file
 
