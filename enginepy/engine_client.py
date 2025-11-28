@@ -7,8 +7,6 @@ import logging
 from tempfile import SpooledTemporaryFile
 from typing import Any, Literal
 
-from aiohttp import hdrs
-
 from aiohttp.client import ClientTimeout
 from ant31box.client.base import BaseClient
 

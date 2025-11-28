@@ -21,6 +21,7 @@ from enginepy.models import (
     Content,
     DocsQuery,
     DocsResponse,
+    DocumentUrlResponse,
     EngineField,
     EngineRequest,
     EngineTrigger,
@@ -30,7 +31,6 @@ from enginepy.models import (
     RequestDocumentsResponse,
     WithContentMode,
 )
-from enginepy.models import DocumentUrlResponse
 from enginepy.telli.models import TelliWebhook
 
 
