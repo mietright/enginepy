@@ -9,6 +9,7 @@ import pytest
 import pytest_asyncio
 from aiohttp import ClientResponseError, ClientTimeout
 from aioresponses import aioresponses
+from yarl import URL
 
 from enginepy import __version__
 from enginepy.engine_client import EngineClient
@@ -794,7 +795,7 @@ async def test_download_document_spooled_success(
             "User-Agent": expected_user_agent,
         }
         # Check the first call to our API
-        engine_call = m.requests[("GET", client._url(api_path))]
+        engine_call = m.requests[("GET", URL(client._url(api_path)))]
         assert engine_call[0].kwargs["headers"] == expected_headers
 
         # `aiohttp` handles the redirect internally, so `aioresponses` only logs one request.
