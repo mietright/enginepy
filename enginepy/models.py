@@ -292,7 +292,7 @@ class RequestDocumentFile(BaseModel):
     created_at: datetime | None = Field(default=None, description="Timestamp of document creation.")
     court_processing_kind: Any | None = Field(default=None, description="Kind of court processing.")
     type_title: str | None = Field(default=None, description="Title for the document type.")
-    approved_at: datetime | None = Field(default=None, description="Timestamp of approval.")
+    approved_at: str | None = Field(default=None, description="Timestamp of approval.")
     uploaded_by: str | None = Field(default=None, description="User who uploaded the file.")
     approved_by: str | None = Field(default=None, description="User who approved the document.")
     created_at_text: str | None = Field(default=None, description="Human-readable creation time.")
@@ -317,6 +317,7 @@ class RequestDocumentFile(BaseModel):
         "approved_at_text",
         "file_extension",
         "size",
+        "approved_at",
         mode="before",
     )
     def validate_str_fields(cls, v: Any) -> str | None:
@@ -324,7 +325,7 @@ class RequestDocumentFile(BaseModel):
             return v
         return None
 
-    @field_validator("created_at", "approved_at", mode="before")
+    @field_validator("created_at", mode="before")
     def validate_datetime_fields(cls, v: Any) -> Any:
         if v is False or v == "":
             return None
