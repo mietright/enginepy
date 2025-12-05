@@ -292,7 +292,7 @@ class RequestDocumentFile(BaseModel):
     created_at: datetime | None = Field(default=None, description="Timestamp of document creation.")
     court_processing_kind: Any | None = Field(default=None, description="Kind of court processing.")
     type_title: str | None = Field(default=None, description="Title for the document type.")
-    approved_at: str | None = Field(default=None, description="Timestamp of approval.")
+    approved_at: datetime | None = Field(default=None, description="Timestamp of approval.")
     uploaded_by: str | None = Field(default=None, description="User who uploaded the file.")
     approved_by: str | None = Field(default=None, description="User who approved the document.")
     created_at_text: str | None = Field(default=None, description="Human-readable creation time.")
@@ -305,6 +305,36 @@ class RequestDocumentFile(BaseModel):
     court_attachment: bool | None = Field(default=None, description="Indicates if it is a court attachment.")
     original_size: int | None = Field(default=None, description="Original file size in bytes.")
     size: str | None = Field(default=None, description="Human-readable file size.")
+
+    @field_validator(
+        "type",
+        "filename",
+        "edit_url",
+        "type_title",
+        "uploaded_by",
+        "approved_by",
+        "created_at_text",
+        "approved_at_text",
+        "file_extension",
+        "size",
+        mode="before",
+    )
+    def validate_str_fields(cls, v: Any) -> str | None:
+        if isinstance(v, str):
+            return v
+        return None
+
+    @field_validator("created_at", "approved_at", mode="before")
+    def validate_datetime_fields(cls, v: Any) -> Any:
+        if v is False or v == "":
+            return None
+        return v
+
+    @field_validator("original_size", mode="before")
+    def validate_int_fields(cls, v: Any) -> Any:
+        if isinstance(v, bool) or v == "":
+            return None
+        return v
 
 
 class RequestForDocuments(BaseModel):
