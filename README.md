@@ -145,6 +145,59 @@ if __name__ == "__main__":
 
 ```
 
+### Token Management
+
+The `EngineClient` provides flexible token management with support for both global and specific token overrides:
+
+#### Global Token Override
+
+Set a token that overrides all API calls, regardless of specific token configurations:
+
+```python
+from enginepy.config import EngineConfigSchema, EngineTokensConfigSchema
+from enginepy.engine_client import EngineClient
+
+# Initialize with config
+config = EngineConfigSchema(
+    endpoint="https://engine.example.com",
+    token="default-token",
+    tokens=EngineTokensConfigSchema(admin="admin-specific-token")
+)
+client = EngineClient(config=config)
+
+# Override all tokens globally
+client.set_token("new-global-token")
+# All subsequent API calls will use "new-global-token"
+```
+
+#### Specific Token Override
+
+Update specific tokens (e.g., `admin`, `zieb`) without affecting the global override:
+
+```python
+# Update only the admin token
+client.set_token("new-admin-token", key="admin")
+# API calls requiring admin token will use "new-admin-token"
+# Other calls use the default or global override token
+```
+
+#### Initialization with Token Override
+
+Pass a token during initialization to set a global override from the start:
+
+```python
+# Legacy pattern (deprecated but still supported)
+client = EngineClient(endpoint="https://engine.example.com", token="my-token")
+# This sets a global override token for all API calls
+```
+
+#### Token Resolution Priority
+
+The client resolves tokens in the following order:
+1. **Global override token** (set via `set_token()` without key or at initialization with `endpoint` and `token`)
+2. **Specific tokens** from `config.tokens` (e.g., `admin`, `zieb`) if the API endpoint has token preferences
+3. **Default token** from `config.token`
+
 See `enginepy/engine_client.py` for all available client methods and `enginepy/models.py` for request/response models.
 
 ## Development
