@@ -147,11 +147,11 @@ if __name__ == "__main__":
 
 ### Token Management
 
-The `EngineClient` provides flexible token management with support for both global and specific token overrides:
+The `EngineClient` provides flexible token management with support for both instance-wide and specific token overrides:
 
-#### Global Token Override
+#### Instance-Wide Token Override
 
-Set a token that overrides all API calls, regardless of specific token configurations:
+Set a token that overrides all API calls for this client instance, regardless of specific token configurations:
 
 ```python
 from enginepy.config import EngineConfigSchema, EngineTokensConfigSchema
@@ -165,14 +165,14 @@ config = EngineConfigSchema(
 )
 client = EngineClient(config=config)
 
-# Override all tokens globally
-client.set_token("new-global-token")
-# All subsequent API calls will use "new-global-token"
+# Override all tokens for this client instance
+client.set_token("new-instance-token")
+# All subsequent API calls on this client instance will use "new-instance-token"
 ```
 
 #### Specific Token Override
 
-Update specific tokens (e.g., `admin`, `zieb`) without affecting the global override:
+Update specific tokens (e.g., `admin`, `zieb`) without affecting the instance-wide override:
 
 ```python
 # Update only the admin token
@@ -188,13 +188,15 @@ Pass a token during initialization to set a global override from the start:
 ```python
 # Legacy pattern (deprecated but still supported)
 client = EngineClient(endpoint="https://engine.example.com", token="my-token")
-# This sets a global override token for all API calls
+# This sets an instance-wide override token for all API calls on this client instance
 ```
+
+**Note:** Each `EngineClient` instance maintains its own token state. Token overrides only affect the specific instance they are set on, not other instances.
 
 #### Token Resolution Priority
 
 The client resolves tokens in the following order:
-1. **Global override token** (set via `set_token()` without key or at initialization with `endpoint` and `token`)
+1. **Instance-wide override token** (set via `set_token()` without key or at initialization with `endpoint` and `token`)
 2. **Specific tokens** from `config.tokens` (e.g., `admin`, `zieb`) if the API endpoint has token preferences
 3. **Default token** from `config.token`
 

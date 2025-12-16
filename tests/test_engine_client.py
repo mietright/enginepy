@@ -85,7 +85,7 @@ async def client(test_endpoint: str, test_token: str) -> AsyncIterator[EngineCli
 
 @pytest.mark.asyncio
 async def test_set_token(client: EngineClient, test_token: str):
-    """Test that set_token updates the client's token with global override."""
+    """Test that set_token updates the client instance's token with instance-wide override."""
     assert client.token == test_token
     new_token = "a-different-token"
     client.set_token(new_token)
@@ -98,7 +98,7 @@ async def test_set_token_overrides_specific_token_when_no_key_given(
     test_endpoint: str, trigger_id: str, request_id: int
 ):
     """
-    Tests that set_token() without a key parameter overrides all tokens,
+    Tests that set_token() without a key parameter overrides all tokens for this client instance,
     including specific tokens like admin.
     """
     admin_token = "original-admin-token"
@@ -111,7 +111,7 @@ async def test_set_token_overrides_specific_token_when_no_key_given(
     )
 
     client = EngineClient(config=config)
-    client.set_token(new_token)  # This now sets a global override
+    client.set_token(new_token)  # This now sets an instance-wide override
 
     trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
     expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
@@ -125,7 +125,7 @@ async def test_set_token_overrides_specific_token_when_no_key_given(
         await client.action_trigger(trigger)
 
         # The key assertion: the token used should be the NEW override token,
-        # not the original admin token, because global override takes precedence.
+        # not the original admin token, because instance-wide override takes precedence.
         # Access the actual request made by aiohttp
         # Get the actual request key from m.requests (aiohttp may order params differently)
         actual_request_keys = list(m.requests.keys())

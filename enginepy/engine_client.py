@@ -130,15 +130,15 @@ class EngineClient(BaseClient):
 
     def set_token(self, token: str, key: str | None = None) -> None:
         """
-        Updates the authentication token used for subsequent requests.
+        Updates the authentication token used for subsequent requests on this client instance.
         
         Args:
             token: The new token value to set.
             key: Optional specific token key to update (e.g., 'admin', 'zieb').
-                 If None, sets a global override token that takes precedence over all specific tokens.
+                 If None, sets an instance-wide override token that takes precedence over all specific tokens.
         """
         if key is None:
-            # Set global override token
+            # Set instance-wide override token
             self._override_token = token
         # Set specific token in config.tokens
         elif hasattr(self.config.tokens, key):
@@ -148,10 +148,10 @@ class EngineClient(BaseClient):
 
     def _get_token(self, token_prefs: list[EngineTokenName] | None = None) -> str:
         """
-        Resolves which token to use based on a priority list.
+        Resolves which token to use based on a priority list for this client instance.
         
         Priority order:
-        1. Global override token (set via set_token() without key or at initialization)
+        1. Instance-wide override token (set via set_token() without key or at initialization)
         2. Specific tokens from config.tokens (if token_prefs provided)
         3. Default token from config.token
 
@@ -164,7 +164,7 @@ class EngineClient(BaseClient):
         Raises:
             ValueError: If no suitable token is found.
         """
-        # Check for global override token first
+        # Check for instance-wide override token first
         if self._override_token:
             return self._override_token
             
