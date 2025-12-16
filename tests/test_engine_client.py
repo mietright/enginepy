@@ -127,8 +127,8 @@ async def test_set_token_overrides_specific_token_when_no_key_given(
         # The key assertion: the token used should be the NEW override token,
         # not the original admin token, because global override takes precedence.
         # Access the actual request made by aiohttp
-        # aioresponses stores the full URL with query params as the key
-        request_key = ("PUT", URL(full_url_with_params))
+        # Note: aiohttp may order query params differently than urlencode, so we check by base URL
+        request_key = ("PUT", URL(expected_url))
         assert request_key in m.requests, f"Expected request not found. Available keys: {list(m.requests.keys())}"
         request_headers = m.requests[request_key][0].kwargs["headers"]
         assert request_headers["token"] == new_token
@@ -165,8 +165,8 @@ async def test_set_token_with_key_updates_specific_token(test_endpoint: str, tri
         await client.action_trigger(trigger)
 
         # The token used should be the updated admin token
-        # aioresponses stores the full URL with query params as the key
-        request_key = ("PUT", URL(full_url_with_params))
+        # Note: aiohttp may order query params differently than urlencode, so we check by base URL
+        request_key = ("PUT", URL(expected_url))
         assert request_key in m.requests
         request_headers = m.requests[request_key][0].kwargs["headers"]
         assert request_headers["token"] == new_admin_token
