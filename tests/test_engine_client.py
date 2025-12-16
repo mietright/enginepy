@@ -127,9 +127,13 @@ async def test_set_token_overrides_specific_token_when_no_key_given(
         # The key assertion: the token used should be the NEW override token,
         # not the original admin token, because global override takes precedence.
         # Access the actual request made by aiohttp
-        # aioresponses stores requests with the full URL including query params
-        request_key = ("PUT", URL(full_url_with_params))
-        assert request_key in m.requests, f"Expected request not found. Available keys: {list(m.requests.keys())}"
+        # Get the actual request key from m.requests (aiohttp may order params differently)
+        actual_request_keys = list(m.requests.keys())
+        assert len(actual_request_keys) == 1, f"Expected exactly one request, found: {actual_request_keys}"
+        request_key = actual_request_keys[0]
+        assert request_key[0] == "PUT", f"Expected PUT request, got: {request_key[0]}"
+        assert trigger_id in str(request_key[1]), f"Expected trigger_id in URL, got: {request_key[1]}"
+        
         request_headers = m.requests[request_key][0].kwargs["headers"]
         assert request_headers["token"] == new_token
         assert request_headers["token"] != admin_token
@@ -165,9 +169,13 @@ async def test_set_token_with_key_updates_specific_token(test_endpoint: str, tri
         await client.action_trigger(trigger)
 
         # The token used should be the updated admin token
-        # aioresponses stores requests with the full URL including query params
-        request_key = ("PUT", URL(full_url_with_params))
-        assert request_key in m.requests
+        # Get the actual request key from m.requests (aiohttp may order params differently)
+        actual_request_keys = list(m.requests.keys())
+        assert len(actual_request_keys) == 1, f"Expected exactly one request, found: {actual_request_keys}"
+        request_key = actual_request_keys[0]
+        assert request_key[0] == "PUT", f"Expected PUT request, got: {request_key[0]}"
+        assert trigger_id in str(request_key[1]), f"Expected trigger_id in URL, got: {request_key[1]}"
+        
         request_headers = m.requests[request_key][0].kwargs["headers"]
         assert request_headers["token"] == new_admin_token
 
