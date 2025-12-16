@@ -12,6 +12,7 @@ from aioresponses import aioresponses
 from yarl import URL
 
 from enginepy import __version__
+from enginepy.config import EngineConfigSchema, EngineTokensConfigSchema
 from enginepy.engine_client import EngineClient
 from enginepy.models import (
     AgentClassifierWorkflowOutput,
@@ -89,6 +90,80 @@ async def test_set_token(client: EngineClient, test_token: str):
     new_token = "a-different-token"
     client.set_token(new_token)
     assert client.token == new_token
+
+
+@pytest.mark.asyncio
+async def test_set_token_is_ineffective_when_specific_token_is_set(
+    test_endpoint: str, trigger_id: str, request_id: int
+):
+    """
+    Tests that set_token() does not override a specific token (e.g., admin)
+    that is already set in the configuration. This demonstrates the confusing behavior.
+    """
+    admin_token = "original-admin-token"
+    new_token = "new-token-should-be-ignored"
+
+    config = EngineConfigSchema(
+        endpoint=test_endpoint,
+        token="default-fallback-token",
+        tokens=EngineTokensConfigSchema(admin=admin_token),
+    )
+
+    client = EngineClient(config=config)
+    client.set_token(new_token)  # This should ideally set the token for subsequent requests
+
+    trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
+    expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
+    full_url_with_params = f"{expected_url}?request_id={request_id}&client=enginepy&attempt=1"
+
+    with aioresponses() as m:
+        m.put(full_url_with_params, status=200, payload={"status": "ok"})
+
+        await client.action_trigger(trigger)
+
+        # The key assertion: the token used should be the *original* admin token,
+        # not the one set by set_token, because _get_token prioritizes it.
+        # We must access the request from the mock to check headers.
+        # The key for requests is a tuple of (METHOD, URL object)
+        request_headers = m.requests[("PUT", URL(full_url_with_params))][0].kwargs["headers"]
+        assert request_headers["token"] == admin_token
+        assert request_headers["token"] != new_token
+
+    await client.session.close()
+
+
+@pytest.mark.asyncio
+async def test_set_token_works_when_specific_token_is_not_set(test_endpoint: str, trigger_id: str, request_id: int):
+    """
+    Tests that set_token() works as expected when a specific token is not set,
+    and the client falls back to the default token.
+    """
+    new_token = "new-token-should-be-used"
+
+    config = EngineConfigSchema(
+        endpoint=test_endpoint,
+        token="default-fallback-token",
+        tokens=EngineTokensConfigSchema(admin=""),  # Admin token is not set
+    )
+
+    client = EngineClient(config=config)
+    client.set_token(new_token)
+
+    trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
+    expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
+    full_url_with_params = f"{expected_url}?request_id={request_id}&client=enginepy&attempt=1"
+
+    with aioresponses() as m:
+        m.put(full_url_with_params, status=200, payload={"status": "ok"})
+
+        await client.action_trigger(trigger)
+
+        # The key assertion: the token from set_token should be used because no specific
+        # admin token was configured.
+        request_headers = m.requests[("PUT", URL(full_url_with_params))][0].kwargs["headers"]
+        assert request_headers["token"] == new_token
+
+    await client.session.close()
 
 
 @pytest.mark.asyncio
