@@ -140,12 +140,11 @@ class EngineClient(BaseClient):
         if key is None:
             # Set global override token
             self._override_token = token
+        # Set specific token in config.tokens
+        elif hasattr(self.config.tokens, key):
+            setattr(self.config.tokens, key, token)
         else:
-            # Set specific token in config.tokens
-            if hasattr(self.config.tokens, key):
-                setattr(self.config.tokens, key, token)
-            else:
-                raise ValueError(f"Unknown token key: {key}. Valid keys are: {', '.join(self.config.tokens.model_fields.keys())}")
+            raise ValueError(f"Unknown token key: {key}. Valid keys are: {', '.join(self.config.tokens.model_fields.keys())}")
 
     def _get_token(self, token_prefs: list[EngineTokenName] | None = None) -> str:
         """
