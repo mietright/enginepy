@@ -3,7 +3,7 @@ import os
 from collections.abc import AsyncIterator
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, call
-from urllib.parse import urlencode  # Import urlencode
+from urllib.parse import urlencode
 
 import pytest
 import pytest_asyncio
@@ -85,23 +85,24 @@ async def client(test_endpoint: str, test_token: str) -> AsyncIterator[EngineCli
 
 @pytest.mark.asyncio
 async def test_set_token(client: EngineClient, test_token: str):
-    """Test that set_token updates the client's token."""
+    """Test that set_token updates the client's token with global override."""
     assert client.token == test_token
     new_token = "a-different-token"
     client.set_token(new_token)
     assert client.token == new_token
+    assert client._override_token == new_token
 
 
 @pytest.mark.asyncio
-async def test_set_token_is_ineffective_when_specific_token_is_set(
+async def test_set_token_overrides_specific_token_when_no_key_given(
     test_endpoint: str, trigger_id: str, request_id: int
 ):
     """
-    Tests that set_token() does not override a specific token (e.g., admin)
-    that is already set in the configuration. This demonstrates the confusing behavior.
+    Tests that set_token() without a key parameter overrides all tokens,
+    including specific tokens like admin.
     """
     admin_token = "original-admin-token"
-    new_token = "new-token-should-be-ignored"
+    new_token = "new-global-override-token"
 
     config = EngineConfigSchema(
         endpoint=test_endpoint,
@@ -110,58 +111,63 @@ async def test_set_token_is_ineffective_when_specific_token_is_set(
     )
 
     client = EngineClient(config=config)
-    client.set_token(new_token)  # This should ideally set the token for subsequent requests
+    client.set_token(new_token)  # This now sets a global override
 
     trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
     expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
-    full_url_with_params = f"{expected_url}?request_id={request_id}&client=enginepy&attempt=1"
+    # Construct params dict for URL building
+    params = {"request_id": request_id, "client": "enginepy", "attempt": 1}
+    full_url_with_params = f"{expected_url}?{urlencode(params)}"
 
     with aioresponses() as m:
         m.put(full_url_with_params, status=200, payload={"status": "ok"})
 
         await client.action_trigger(trigger)
 
-        # The key assertion: the token used should be the *original* admin token,
-        # not the one set by set_token, because _get_token prioritizes it.
-        # We must access the request from the mock to check headers.
-        # The key for requests is a tuple of (METHOD, URL object)
-        request_headers = m.requests[("PUT", URL(full_url_with_params))][0].kwargs["headers"]
-        assert request_headers["token"] == admin_token
-        assert request_headers["token"] != new_token
+        # The key assertion: the token used should be the NEW override token,
+        # not the original admin token, because global override takes precedence.
+        # Access the actual request made by aiohttp
+        request_key = ("PUT", URL(expected_url))
+        assert request_key in m.requests, f"Expected request not found. Available keys: {list(m.requests.keys())}"
+        request_headers = m.requests[request_key][0].kwargs["headers"]
+        assert request_headers["token"] == new_token
+        assert request_headers["token"] != admin_token
 
     await client.session.close()
 
 
 @pytest.mark.asyncio
-async def test_set_token_works_when_specific_token_is_not_set(test_endpoint: str, trigger_id: str, request_id: int):
+async def test_set_token_with_key_updates_specific_token(test_endpoint: str, trigger_id: str, request_id: int):
     """
-    Tests that set_token() works as expected when a specific token is not set,
-    and the client falls back to the default token.
+    Tests that set_token(token, key) updates a specific token in config.tokens.
     """
-    new_token = "new-token-should-be-used"
+    original_admin_token = "original-admin-token"
+    new_admin_token = "new-admin-token"
 
     config = EngineConfigSchema(
         endpoint=test_endpoint,
         token="default-fallback-token",
-        tokens=EngineTokensConfigSchema(admin=""),  # Admin token is not set
+        tokens=EngineTokensConfigSchema(admin=original_admin_token),
     )
 
     client = EngineClient(config=config)
-    client.set_token(new_token)
+    client.set_token(new_admin_token, key="admin")  # Update specific admin token
 
     trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
     expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
-    full_url_with_params = f"{expected_url}?request_id={request_id}&client=enginepy&attempt=1"
+    params = {"request_id": request_id, "client": "enginepy", "attempt": 1}
+    full_url_with_params = f"{expected_url}?{urlencode(params)}"
 
     with aioresponses() as m:
         m.put(full_url_with_params, status=200, payload={"status": "ok"})
 
         await client.action_trigger(trigger)
 
-        # The key assertion: the token from set_token should be used because no specific
-        # admin token was configured.
-        request_headers = m.requests[("PUT", URL(full_url_with_params))][0].kwargs["headers"]
-        assert request_headers["token"] == new_token
+        # The token used should be the updated admin token
+        request_key = ("PUT", URL(expected_url))
+        assert request_key in m.requests
+        request_headers = m.requests[request_key][0].kwargs["headers"]
+        assert request_headers["token"] == new_admin_token
 
     await client.session.close()
 

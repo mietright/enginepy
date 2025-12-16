@@ -120,31 +120,67 @@ class EngineClient(BaseClient):
             raise ValueError("Must provide either a 'config' object or 'endpoint' and 'token'.")
 
         super().__init__(endpoint=_endpoint, verify_tls=False, client_name="engine")
+        
+        # Override token for all calls if provided at initialization
+        self._override_token: str | None = token if endpoint and token else None
 
     @property
     def token(self) -> str:
-        return self.config.token
+        return self._override_token or self.config.token
 
-    def set_token(self, token: str) -> None:
-        """Updates the default authentication token used for subsequent requests."""
-        self.config.token = token
+    def set_token(self, token: str, key: str | None = None) -> None:
+        """
+        Updates the authentication token used for subsequent requests.
+        
+        Args:
+            token: The new token value to set.
+            key: Optional specific token key to update (e.g., 'admin', 'zieb').
+                 If None, sets a global override token that takes precedence over all specific tokens.
+        """
+        if key is None:
+            # Set global override token
+            self._override_token = token
+        else:
+            # Set specific token in config.tokens
+            if hasattr(self.config.tokens, key):
+                setattr(self.config.tokens, key, token)
+            else:
+                raise ValueError(f"Unknown token key: {key}. Valid keys are: {', '.join(self.config.tokens.model_fields.keys())}")
 
     def _get_token(self, token_prefs: list[EngineTokenName] | None = None) -> str:
         """
         Resolves which token to use based on a priority list.
+        
+        Priority order:
+        1. Global override token (set via set_token() without key or at initialization)
+        2. Specific tokens from config.tokens (if token_prefs provided)
+        3. Default token from config.token
 
-        Iterates through the preferred token names, returning the first one found in the
-        configuration. If none are found, it falls back to the default token.
+        Args:
+            token_prefs: Optional list of preferred token names to check in config.tokens.
+
+        Returns:
+            The resolved token string.
+
+        Raises:
+            ValueError: If no suitable token is found.
         """
+        # Check for global override token first
+        if self._override_token:
+            return self._override_token
+            
+        # Check specific tokens if preferences provided
         if token_prefs:
             for token_name in token_prefs:
                 # getattr on config.tokens (pydantic model)
                 token_value = getattr(self.config.tokens, token_name.value.lower(), None)
                 if token_value:
                     return token_value
+        
         # Fallback to the main token
         if self.config.token:
             return self.config.token
+            
         raise ValueError("No suitable token found for the request.")
 
     def headers(
