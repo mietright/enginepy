@@ -73,7 +73,7 @@ API_ENDPOINT_METADATA: dict[str, dict[str, Any]] = {
         "method": "POST",
     },
     "scheduled_call_response": {
-        "tokens": [EngineTokenName.ADMIN],
+        "tokens": [EngineTokenName.ZIEB, EngineTokenName.ADMIN],
         "path": "/api/scheduled_call_response",
         "method": "POST",
     },
@@ -107,22 +107,20 @@ class EngineClient(BaseClient):
         endpoint: str | None = None,
         token: str | None = None,
     ) -> None:
+        _endpoint = ""
         if config:
             _endpoint = config.endpoint
             self.config = config
-        elif endpoint and token:
-            logger.warning(
-                "Initializing EngineClient with endpoint and token is deprecated. Please use a config object."
-            )
-            _endpoint = endpoint
-            self.config = EngineConfigSchema(endpoint=endpoint, token=token)
-        else:
+        if endpoint:
+            _endpoint = endpoint                   
+        if not _endpoint:
             raise ValueError("Must provide either a 'config' object or 'endpoint' and 'token'.")
-
+        
+        self._override_token: str | None = token
         super().__init__(endpoint=_endpoint, verify_tls=False, client_name="engine")
         
         # Override token for all calls if provided at initialization
-        self._override_token: str | None = token if endpoint and token else None
+
 
     @property
     def token(self) -> str:
