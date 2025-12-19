@@ -45,7 +45,8 @@ dev = [
     "ruff",
     "ipython>=8.0.0,<9",
     "bump-my-version>=1.2.0",
-    "datamodel-code-generator"
+    "datamodel-code-generator",
+    "licensecheck>=2025.1.0",
 ]
 
 [build-system]
