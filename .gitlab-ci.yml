@@ -6,6 +6,10 @@ include:
   - project: 'connylegal/mietright_deployments'
     ref: main
     file: '/.gitlab-ci/build-container.yaml'
+    
+  - project: 'connylegal/mietright_deployments'
+    ref: main
+    file: '/.gitlab-ci/trivy.yaml'
 
 variables:
   FAILFASTCI_NAMESPACE: connylegal
@@ -50,3 +54,20 @@ code lint:
     - make check
   tags:
     - kubernetes
+
+# ---------------------------------------------------------------------------
+# TRIVY SCANNERS (Filesystem only, Parallel, Table Output)
+# ---------------------------------------------------------------------------
+    
+# 1. Vulnerabilities Scanner
+trivy-vuln:
+  extends: .trivy-vuln
+
+# 2. Misconfiguration Scanner (IaC)
+trivy-misconfig:
+  extends: .trivy-misconfig
+
+# 3. License Scanner
+trivy-license:
+  extends: .trivy-license
+    
