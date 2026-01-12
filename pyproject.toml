@@ -92,3 +92,6 @@ filename = 'enginepy/__init__.py'
 search = "__version__ = \"{current_version}\""
 replace = "__version__ = \"{new_version}\""
 regex = true
+
+[tool.pyright]
+exclude = ["**/gen/**", "tests"]
