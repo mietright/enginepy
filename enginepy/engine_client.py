@@ -24,6 +24,7 @@ from enginepy.models import (
     EngineTokenName,
     EngineTrigger,
     RequestDocumentsResponse,
+    UploadDocumentResponse,
 )
 from enginepy.telli.models import TelliWebhook
 
@@ -97,6 +98,11 @@ API_ENDPOINT_METADATA: dict[str, dict[str, Any]] = {
         "path": "/api/admin/documents/{document_id}",
         "method": "GET",
     },
+    "upload_document_from_url": {
+        "tokens": [EngineTokenName.ADMIN],
+        "path": "/api/requests/{request_id}/documents/upload",
+        "method": "POST",
+    },
 }
 
 
@@ -112,15 +118,18 @@ class EngineClient(BaseClient):
             _endpoint = config.endpoint
             self.config = config
         if endpoint:
-            _endpoint = endpoint                   
+            _endpoint = endpoint
+
+        if not hasattr(self, "config"):
+            self.config = EngineConfigSchema(endpoint=_endpoint)
+
         if not _endpoint:
             raise ValueError("Must provide either a 'config' object or 'endpoint' and 'token'.")
-        
+
         self._override_token: str | None = token
         super().__init__(endpoint=_endpoint, verify_tls=False, client_name="engine")
-        
-        # Override token for all calls if provided at initialization
 
+        # Override token for all calls if provided at initialization
 
     @property
     def token(self) -> str:
@@ -129,7 +138,7 @@ class EngineClient(BaseClient):
     def set_token(self, token: str, key: str | None = None) -> None:
         """
         Updates the authentication token used for subsequent requests on this client instance.
-        
+
         Args:
             token: The new token value to set.
             key: Optional specific token key to update (e.g., 'admin', 'zieb').
@@ -142,12 +151,14 @@ class EngineClient(BaseClient):
         elif hasattr(self.config.tokens, key):
             setattr(self.config.tokens, key, token)
         else:
-            raise ValueError(f"Unknown token key: {key}. Valid keys are: {', '.join(self.config.tokens.model_fields.keys())}")
+            raise ValueError(
+                f"Unknown token key: {key}. Valid keys are: {', '.join(self.config.tokens.model_fields.keys())}"
+            )
 
     def _get_token(self, token_prefs: list[EngineTokenName] | None = None) -> str:
         """
         Resolves which token to use based on a priority list for this client instance.
-        
+
         Priority order:
         1. Instance-wide override token (set via set_token() without key or at initialization)
         2. Specific tokens from config.tokens (if token_prefs provided)
@@ -165,7 +176,7 @@ class EngineClient(BaseClient):
         # Check for instance-wide override token first
         if self._override_token:
             return self._override_token
-            
+
         # Check specific tokens if preferences provided
         if token_prefs:
             for token_name in token_prefs:
@@ -173,11 +184,11 @@ class EngineClient(BaseClient):
                 token_value = getattr(self.config.tokens, token_name.value.lower(), None)
                 if token_value:
                     return token_value
-        
+
         # Fallback to the main token
         if self.config.token:
             return self.config.token
-            
+
         raise ValueError("No suitable token found for the request.")
 
     def headers(
@@ -186,7 +197,7 @@ class EngineClient(BaseClient):
         extra: dict[str, str] | None = None,
         token: str | None = None,
     ) -> dict[str, str]:
-        _token = token or self.config.token
+        _token = token or self._get_token()
         headers_dict = {
             "Accept": "*/*",
             "token": _token,
@@ -327,7 +338,9 @@ class EngineClient(BaseClient):
         data = await resp.json()
         return DocumentUrlResponse.model_validate(data)
 
-    async def download_document(self, document_id: int, filepath: str | None = None) -> SpooledTemporaryFile | str | None:
+    async def download_document(
+        self, document_id: int, filepath: str | None = None
+    ) -> SpooledTemporaryFile | str | None:
         """
         Downloads a document's content.
 
@@ -385,6 +398,54 @@ class EngineClient(BaseClient):
         tmp_file.write(content)
         tmp_file.seek(0)
         return tmp_file
+
+    async def upload_document_from_url(
+        self,
+        request_id: int,
+        url: str,
+        document_source: str = "system_generated",
+        incoming: bool = True,
+        document_type: str | None = None,
+    ) -> UploadDocumentResponse:
+        """
+        Creates a document from a URL and attaches it to a request.
+
+        Args:
+            request_id: The ID of the request to attach the document to.
+            url: The URL of the file to download and upload.
+            document_source: The source of the document.
+            incoming: Whether the document is incoming.
+            document_type: If provided, classifies the document with this type and triggers actions.
+
+        Returns:
+            An UploadDocumentResponse object with the new document ID and request ID.
+
+        Raises:
+            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+        """
+        path = f"/api/requests/{request_id}/documents/upload"
+        payload: dict[str, str] = {
+            "url": url,
+            "document_source": document_source,
+            "incoming": str(incoming).lower(),
+        }
+        if document_type:
+            payload["document_type"] = document_type
+
+        token = self._get_token(API_ENDPOINT_METADATA["upload_document_from_url"]["tokens"])
+        request_headers = self.headers(token=token, content_type="form")
+
+        resp = await self.session.post(
+            self._url(path),
+            data=payload,
+            headers=request_headers,
+            ssl=self.ssl_mode,
+            timeout=ClientTimeout(total=300),
+        )
+        await self.log_request(resp)
+        resp.raise_for_status()
+        data = await resp.json()
+        return UploadDocumentResponse.model_validate(data)
 
     async def get_case_data_all(
         self, request_id: int, with_summary: bool = False, with_wwm: bool = True

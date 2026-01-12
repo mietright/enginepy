@@ -87,11 +87,13 @@ class DocsResponse(BaseModel):
 
 
 class AwsPrediction(BaseModel):
+    model_config = ConfigDict(extra="allow")
     label: str = Field(..., validation_alias=AliasChoices("label", "Name"))
     score: float = Field(..., validation_alias=AliasChoices("Score", "score"))
 
 
 class AwsJobDescribe(BaseModel):
+    model_config = ConfigDict(extra="allow")
     id: str = Field(default="", validation_alias=AliasChoices("JobId", "id"), serialization_alias="JobId")
     # Temporarily removed aliases to diagnose pyright error
     name: str = Field(default="")
@@ -143,6 +145,7 @@ class AwsJobDescribe(BaseModel):
 
 
 class AwsInference(BaseModel):
+    model_config = ConfigDict(extra="allow")
     input_s3: str = Field(default="")
     output_s3: str = Field(default="")
     line: str = Field(..., validation_alias=AliasChoices("Line", "line"))
@@ -153,6 +156,7 @@ class AwsInference(BaseModel):
 
 
 class AwsClassifierResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
     job: AwsJobDescribe = Field(...)
     inference: list[AwsInference] = Field(...)
     model: str = Field(default="unknown")
@@ -192,6 +196,7 @@ class EngineTypeEnum(StrEnum):
 
 
 class EngineCaseInfo(BaseModel):
+    model_config = ConfigDict(extra="allow")
     user_id: int = Field(-1)
     request_id: int = Field(-1)
     reference_number: str = Field("")
@@ -201,6 +206,7 @@ class EngineCaseInfo(BaseModel):
 
 
 class Job(BaseModel):
+    model_config = ConfigDict(extra="allow")
     uuid: str = Field(...)
     name: str = Field(...)
     status: str | None = Field(default=None)
@@ -209,6 +215,7 @@ class Job(BaseModel):
 
 # TODO: strip_whitespace is not working anymore
 class Address(BaseModel):
+    model_config = ConfigDict(extra="allow")
     city: str = Field(..., min_length=1)  # strip_whitespace=True,
     house: str = Field(..., title="House Number", min_length=1)  # strip_whitespace=True,
     postalCode: str = Field(..., min_length=1)  # strip_whitespace=True,
@@ -216,6 +223,7 @@ class Address(BaseModel):
 
 
 class Contact(BaseModel):
+    model_config = ConfigDict(extra="allow")
     address: Address = Field(...)
     email: str = Field(..., pattern=r"^.+@.+\..+")  # strip_whitespace=True,
     firstName: str = Field(..., min_length=1)  # strip_whitespace=True,
@@ -223,6 +231,7 @@ class Contact(BaseModel):
 
 
 class UtmParams(BaseModel):
+    model_config = ConfigDict(extra="allow")
     awc: str = Field("")
     utm_medium: str = Field("")
     utm_source: str = Field("")
@@ -232,6 +241,7 @@ class UtmParams(BaseModel):
 
 
 class EngineTrigger(BaseModel):
+    model_config = ConfigDict(extra="allow")
     trigger_id: str = Field(...)
     name: str = Field(default="")
     request_id: int | None = Field(None)
@@ -241,6 +251,7 @@ class EngineTrigger(BaseModel):
 
 
 class EngineField(BaseModel):
+    model_config = ConfigDict(extra="allow")
     field: str = Field(...)
     answer: bool | str | int | float | None = Field(None)
     type: EngineTypeEnum = Field(EngineTypeEnum.STRING)
@@ -248,6 +259,8 @@ class EngineField(BaseModel):
 
 class ApiEndpoint(BaseModel):
     """Represents a CLI-exposed API endpoint."""
+
+    model_config = ConfigDict(extra="allow")
 
     command: str = Field(..., description="The CLI command to invoke the endpoint.")
     method_name: str = Field(..., description="The EngineClient method name.")
@@ -259,6 +272,7 @@ class ApiEndpoint(BaseModel):
 
 
 class EngineRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
     product: str = Field(...)
     funnel: str = Field(...)
     documents: str = Field(default="[]")
@@ -268,6 +282,7 @@ class EngineRequest(BaseModel):
 
 
 class EngineResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
     request_id: int = Field(default=-1)
     user_id: int | None = Field(default=None)
     status: int | None = Field(default=None)
@@ -278,8 +293,11 @@ class EngineResponse(BaseModel):
 
 
 class RequestDocumentFile(BaseModel):
+    model_config = ConfigDict(extra="allow")
     id: int = Field(..., description="Unique identifier for the document file.")
-    physical_mails: list[Any] = Field(default_factory=list, description="List of physical mails related to the document.")
+    physical_mails: list[Any] = Field(
+        default_factory=list, description="List of physical mails related to the document."
+    )
     type: str | None = Field(default=None, description="Type of the document.")
     image: bool | None = Field(default=None, description="Indicates if the document is an image.")
     pdf: bool | None = Field(default=None, description="Indicates if the document is a PDF.")
@@ -297,7 +315,9 @@ class RequestDocumentFile(BaseModel):
     approved_by: str | None = Field(default=None, description="User who approved the document.")
     created_at_text: str | None = Field(default=None, description="Human-readable creation time.")
     approved_at_text: str | None = Field(default=None, description="Human-readable approval time.")
-    sensitive: bool | None = Field(default=None, description="Indicates if the document contains sensitive information.")
+    sensitive: bool | None = Field(
+        default=None, description="Indicates if the document contains sensitive information."
+    )
     eb_date: Any | None = Field(default=None, description="EB date associated with the document.")
     court_id: Any | None = Field(default=None, description="Identifier for the court.")
     court_type: bool | None = Field(default=None, description="Indicates the type of court.")
@@ -339,6 +359,7 @@ class RequestDocumentFile(BaseModel):
 
 
 class RequestForDocuments(BaseModel):
+    model_config = ConfigDict(extra="allow")
     id: int | None = Field(default=None, description="The ID of the request.")
     files: list[RequestDocumentFile] = Field(
         default_factory=list, description="A list of document files associated with the request."
@@ -348,42 +369,63 @@ class RequestForDocuments(BaseModel):
 class DocumentUrlResponse(BaseModel):
     """Represents the JSON response for a document URL."""
 
+    model_config = ConfigDict(extra="allow")
+
     url: str = Field(..., description="The presigned URL for the document.")
 
 
 class S3Data(BaseModel):
+    model_config = ConfigDict(extra="allow")
     key: str | None = Field(default=None, description="The key for the new object in S3.")
     success_action_status: str | None = Field(default=None, description="Status code to return on successful upload.")
     acl: str | None = Field(default=None, description="Access control list for the new object.")
     policy: str | None = Field(default=None, description="The S3 policy for the upload.")
     x_amz_credential: str | None = Field(default=None, alias="x-amz-credential", description="AWS credential.")
-    x_amz_algorithm: str | None = Field(default=None, alias="x-amz-algorithm", description="AWS algorithm used for signing.")
+    x_amz_algorithm: str | None = Field(
+        default=None, alias="x-amz-algorithm", description="AWS algorithm used for signing."
+    )
     x_amz_date: str | None = Field(default=None, alias="x-amz-date", description="Date of the request.")
     x_amz_signature: str | None = Field(default=None, alias="x-amz-signature", description="Signature for the request.")
 
 
 class PresignedPost(BaseModel):
+    model_config = ConfigDict(extra="allow")
     s3_data: S3Data | None = Field(default=None, alias="s3-data", description="S3 data for the presigned post.")
     s3_url: str | None = Field(default=None, alias="s3-url", description="The URL to post the file to.")
     s3_host: str | None = Field(default=None, alias="s3-host", description="The host for the S3 bucket.")
 
 
 class RequestDocumentsResponse(BaseModel):
-    request: RequestForDocuments | None = Field(default=None, description="Information about the request and its documents.")
-    presigned_post: PresignedPost | None = Field(default=None, description="Presigned post data for uploading files to S3.")
+    request: RequestForDocuments | None = Field(
+        default=None, description="Information about the request and its documents."
+    )
+    presigned_post: PresignedPost | None = Field(
+        default=None, description="Presigned post data for uploading files to S3."
+    )
+
+
+class UploadDocumentResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: int = Field(..., description="The ID of the created document.")
+    request_id: int = Field(..., description="The ID of the request the document was added to.")
 
 
 class ActionTrigger(BaseModel):
+    model_config = ConfigDict(extra="allow")
     trigger_id: str = Field(...)
     name: str = Field(...)
 
 
 class ActionTriggers(BaseModel):
+    model_config = ConfigDict(extra="allow")
     success: list[ActionTrigger] = Field(default=[])
     fail: list[ActionTrigger] = Field(default=[])
 
 
 class MappingField(BaseModel):
+    model_config = ConfigDict(extra="allow")
     type: EngineTypeEnum = Field(default=EngineTypeEnum.STRING)
     source: str | None = Field(None)
     default: bool | str | int | float | None | DefaultType = Field(default=DefaultType.NO_DEFAULT)
@@ -391,6 +433,7 @@ class MappingField(BaseModel):
 
 
 class EngineMapper(BaseModel):
+    model_config = ConfigDict(extra="allow")
     name: str = Field(...)
     source: Literal["heyflow", "girofunnel", "facebook"] = Field(...)
     product_name: str = Field(...)
