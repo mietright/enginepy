@@ -24,6 +24,7 @@ from enginepy.models import (
     EngineTokenName,
     EngineTrigger,
     RequestDocumentsResponse,
+    UploadDocumentResponse,
 )
 from enginepy.telli.models import TelliWebhook
 
@@ -96,6 +97,11 @@ API_ENDPOINT_METADATA: dict[str, dict[str, Any]] = {
         "tokens": [EngineTokenName.ADMIN],
         "path": "/api/admin/documents/{document_id}",
         "method": "GET",
+    },
+    "upload_document_from_url": {
+        "tokens": [EngineTokenName.ADMIN],
+        "path": "/api/admin/requests/{request_id}/documents",
+        "method": "POST",
     },
 }
 
@@ -385,6 +391,54 @@ class EngineClient(BaseClient):
         tmp_file.write(content)
         tmp_file.seek(0)
         return tmp_file
+
+    async def upload_document_from_url(
+        self,
+        request_id: int,
+        url: str,
+        document_source: str = "system_generated",
+        incoming: bool = True,
+        document_type: str | None = None,
+    ) -> UploadDocumentResponse:
+        """
+        Creates a document from a URL and attaches it to a request.
+
+        Args:
+            request_id: The ID of the request to attach the document to.
+            url: The URL of the file to download and upload.
+            document_source: The source of the document.
+            incoming: Whether the document is incoming.
+            document_type: If provided, classifies the document with this type and triggers actions.
+
+        Returns:
+            An UploadDocumentResponse object with the new document ID and request ID.
+
+        Raises:
+            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+        """
+        path = f"/api/admin/requests/{request_id}/documents"
+        payload: dict[str, str] = {
+            "url": url,
+            "document_source": document_source,
+            "incoming": str(incoming).lower(),
+        }
+        if document_type:
+            payload["document_type"] = document_type
+
+        token = self._get_token(API_ENDPOINT_METADATA["upload_document_from_url"]["tokens"])
+        request_headers = self.headers(token=token, content_type="form")
+
+        resp = await self.session.post(
+            self._url(path),
+            data=payload,
+            headers=request_headers,
+            ssl=self.ssl_mode,
+            timeout=ClientTimeout(total=300),
+        )
+        await self.log_request(resp)
+        resp.raise_for_status()
+        data = await resp.json()
+        return UploadDocumentResponse.model_validate(data)
 
     async def get_case_data_all(
         self, request_id: int, with_summary: bool = False, with_wwm: bool = True

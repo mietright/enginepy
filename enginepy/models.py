@@ -373,6 +373,11 @@ class RequestDocumentsResponse(BaseModel):
     presigned_post: PresignedPost | None = Field(default=None, description="Presigned post data for uploading files to S3.")
 
 
+class UploadDocumentResponse(BaseModel):
+    id: int = Field(..., description="The ID of the created document.")
+    request_id: int = Field(..., description="The ID of the request the document was added to.")
+
+
 class ActionTrigger(BaseModel):
     trigger_id: str = Field(...)
     name: str = Field(...)
