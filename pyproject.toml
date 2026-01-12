@@ -3,7 +3,7 @@ name = "enginepy"
 version = "0.1.5"
 description = ""
 authors = [{ name = "ant31", email = "2t.antoine@gmail.com" }]
-requires-python = ">=3.12,<4"
+requires-python = ">=3.14,<4"
 readme = "README.md"
 dependencies = [
     "asyncio (>=3)",
@@ -55,7 +55,7 @@ build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py314']
 include = '\.pyi?$'
 
 [tool.isort]

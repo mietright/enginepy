@@ -24,7 +24,7 @@ variables:
 # # run TEST
 unit test:
   image:
-    name: python:3.12
+    name: python:3.14
   stage: test
   before_script:
     - pip install uv -U
@@ -45,7 +45,7 @@ unit test:
 
 code lint:
   image:
-    name: python:3.12
+    name: python:3.14
   stage: test
   before_script:
     - pip install uv -U
