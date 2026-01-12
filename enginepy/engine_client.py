@@ -100,7 +100,7 @@ API_ENDPOINT_METADATA: dict[str, dict[str, Any]] = {
     },
     "upload_document_from_url": {
         "tokens": [EngineTokenName.ADMIN],
-        "path": "/api/admin/requests/{request_id}/documents",
+        "path": "/api/requests/{request_id}/documents/upload",
         "method": "POST",
     },
 }
@@ -420,7 +420,7 @@ class EngineClient(BaseClient):
         Raises:
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
         """
-        path = f"/api/admin/requests/{request_id}/documents"
+        path = f"/api/requests/{request_id}/documents/upload"
         payload: dict[str, str] = {
             "url": url,
             "document_source": document_source,
