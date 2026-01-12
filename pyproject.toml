@@ -94,4 +94,4 @@ replace = "__version__ = \"{new_version}\""
 regex = true
 
 [tool.pyright]
-exclude = ["**/gen/**", "tests"]
+exclude = ["**/gen/**", "tests", ".venv"]
