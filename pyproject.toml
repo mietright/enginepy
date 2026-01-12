@@ -8,7 +8,7 @@ readme = "README.md"
 dependencies = [
     "asyncio (>=3)",
     "pydantic",
-    "typer[all]",
+    "typer",
     "pyyaml",
     "sentry-sdk[fastapi]",
     "typing-extensions",

@@ -118,10 +118,14 @@ class EngineClient(BaseClient):
             _endpoint = config.endpoint
             self.config = config
         if endpoint:
-            _endpoint = endpoint                   
+            _endpoint = endpoint
+
+        if not hasattr(self, "config"):
+            self.config = EngineConfigSchema(endpoint=_endpoint)
+
         if not _endpoint:
             raise ValueError("Must provide either a 'config' object or 'endpoint' and 'token'.")
-        
+
         self._override_token: str | None = token
         super().__init__(endpoint=_endpoint, verify_tls=False, client_name="engine")
         
