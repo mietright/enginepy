@@ -196,7 +196,7 @@ class EngineClient(BaseClient):
         extra: dict[str, str] | None = None,
         token: str | None = None,
     ) -> dict[str, str]:
-        _token = token or self.config.token
+        _token = token or self._get_token()
         headers_dict = {
             "Accept": "*/*",
             "token": _token,
