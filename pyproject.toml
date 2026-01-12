@@ -65,7 +65,7 @@ line_length = 120
 skip_gitignore = true
 
 [tool.pytest]
-testpaths = "tests/"
+testpaths = ["tests/"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
