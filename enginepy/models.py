@@ -374,6 +374,9 @@ class RequestDocumentsResponse(BaseModel):
 
 
 class UploadDocumentResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
     id: int = Field(..., description="The ID of the created document.")
     request_id: int = Field(..., description="The ID of the request the document was added to.")
 
