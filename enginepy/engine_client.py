@@ -128,9 +128,8 @@ class EngineClient(BaseClient):
 
         self._override_token: str | None = token
         super().__init__(endpoint=_endpoint, verify_tls=False, client_name="engine")
-        
-        # Override token for all calls if provided at initialization
 
+        # Override token for all calls if provided at initialization
 
     @property
     def token(self) -> str:
@@ -139,7 +138,7 @@ class EngineClient(BaseClient):
     def set_token(self, token: str, key: str | None = None) -> None:
         """
         Updates the authentication token used for subsequent requests on this client instance.
-        
+
         Args:
             token: The new token value to set.
             key: Optional specific token key to update (e.g., 'admin', 'zieb').
@@ -152,12 +151,14 @@ class EngineClient(BaseClient):
         elif hasattr(self.config.tokens, key):
             setattr(self.config.tokens, key, token)
         else:
-            raise ValueError(f"Unknown token key: {key}. Valid keys are: {', '.join(self.config.tokens.model_fields.keys())}")
+            raise ValueError(
+                f"Unknown token key: {key}. Valid keys are: {', '.join(self.config.tokens.model_fields.keys())}"
+            )
 
     def _get_token(self, token_prefs: list[EngineTokenName] | None = None) -> str:
         """
         Resolves which token to use based on a priority list for this client instance.
-        
+
         Priority order:
         1. Instance-wide override token (set via set_token() without key or at initialization)
         2. Specific tokens from config.tokens (if token_prefs provided)
@@ -175,7 +176,7 @@ class EngineClient(BaseClient):
         # Check for instance-wide override token first
         if self._override_token:
             return self._override_token
-            
+
         # Check specific tokens if preferences provided
         if token_prefs:
             for token_name in token_prefs:
@@ -183,11 +184,11 @@ class EngineClient(BaseClient):
                 token_value = getattr(self.config.tokens, token_name.value.lower(), None)
                 if token_value:
                     return token_value
-        
+
         # Fallback to the main token
         if self.config.token:
             return self.config.token
-            
+
         raise ValueError("No suitable token found for the request.")
 
     def headers(
@@ -337,7 +338,9 @@ class EngineClient(BaseClient):
         data = await resp.json()
         return DocumentUrlResponse.model_validate(data)
 
-    async def download_document(self, document_id: int, filepath: str | None = None) -> SpooledTemporaryFile | str | None:
+    async def download_document(
+        self, document_id: int, filepath: str | None = None
+    ) -> SpooledTemporaryFile | str | None:
         """
         Downloads a document's content.
 

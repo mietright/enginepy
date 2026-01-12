@@ -279,7 +279,9 @@ class EngineResponse(BaseModel):
 
 class RequestDocumentFile(BaseModel):
     id: int = Field(..., description="Unique identifier for the document file.")
-    physical_mails: list[Any] = Field(default_factory=list, description="List of physical mails related to the document.")
+    physical_mails: list[Any] = Field(
+        default_factory=list, description="List of physical mails related to the document."
+    )
     type: str | None = Field(default=None, description="Type of the document.")
     image: bool | None = Field(default=None, description="Indicates if the document is an image.")
     pdf: bool | None = Field(default=None, description="Indicates if the document is a PDF.")
@@ -297,7 +299,9 @@ class RequestDocumentFile(BaseModel):
     approved_by: str | None = Field(default=None, description="User who approved the document.")
     created_at_text: str | None = Field(default=None, description="Human-readable creation time.")
     approved_at_text: str | None = Field(default=None, description="Human-readable approval time.")
-    sensitive: bool | None = Field(default=None, description="Indicates if the document contains sensitive information.")
+    sensitive: bool | None = Field(
+        default=None, description="Indicates if the document contains sensitive information."
+    )
     eb_date: Any | None = Field(default=None, description="EB date associated with the document.")
     court_id: Any | None = Field(default=None, description="Identifier for the court.")
     court_type: bool | None = Field(default=None, description="Indicates the type of court.")
@@ -357,7 +361,9 @@ class S3Data(BaseModel):
     acl: str | None = Field(default=None, description="Access control list for the new object.")
     policy: str | None = Field(default=None, description="The S3 policy for the upload.")
     x_amz_credential: str | None = Field(default=None, alias="x-amz-credential", description="AWS credential.")
-    x_amz_algorithm: str | None = Field(default=None, alias="x-amz-algorithm", description="AWS algorithm used for signing.")
+    x_amz_algorithm: str | None = Field(
+        default=None, alias="x-amz-algorithm", description="AWS algorithm used for signing."
+    )
     x_amz_date: str | None = Field(default=None, alias="x-amz-date", description="Date of the request.")
     x_amz_signature: str | None = Field(default=None, alias="x-amz-signature", description="Signature for the request.")
 
@@ -369,8 +375,12 @@ class PresignedPost(BaseModel):
 
 
 class RequestDocumentsResponse(BaseModel):
-    request: RequestForDocuments | None = Field(default=None, description="Information about the request and its documents.")
-    presigned_post: PresignedPost | None = Field(default=None, description="Presigned post data for uploading files to S3.")
+    request: RequestForDocuments | None = Field(
+        default=None, description="Information about the request and its documents."
+    )
+    presigned_post: PresignedPost | None = Field(
+        default=None, description="Presigned post data for uploading files to S3."
+    )
 
 
 class UploadDocumentResponse(BaseModel):
