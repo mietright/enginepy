@@ -268,7 +268,7 @@ class EngineClient(BaseClient):
         """
         url = self._url("/api/zieb/documents/update_suggestions")
         # Use model_dump for the dictionary, pass it to the json parameter
-        data_dict = updates.model_dump(exclude_none=True, exclude_unset=True)
+        data_dict = updates.model_dump(mode="json", exclude_none=True, exclude_unset=True)
 
         token = self._get_token(API_ENDPOINT_METADATA["update_doc_suggestions"]["tokens"])
         request_headers = self.headers(token=token)
@@ -531,7 +531,7 @@ class EngineClient(BaseClient):
         """
         path = f"/api/admin/action_triggers/{engine_trigger.trigger_id}"
         # Params should include query parameters
-        params = engine_trigger.model_dump(include={"request_id", "client", "attempt"}, exclude_none=True)
+        params = engine_trigger.model_dump(mode="json", include={"request_id", "client", "attempt"}, exclude_none=True)
         token = self._get_token(API_ENDPOINT_METADATA["action_trigger"]["tokens"])
         request_headers = self.headers("form", token=token)  # Original used form content type
         resp = await self.session.put(
@@ -591,7 +591,7 @@ class EngineClient(BaseClient):
         """
         path = "/api/admin/data_source"
         # Prepare payload as a dictionary for form data
-        payload = enginereq.model_dump(exclude_none=True, exclude_unset=True)
+        payload = enginereq.model_dump(mode="json", exclude_none=True, exclude_unset=True)
         # Handle nested JSON field specifically, as in original code
         if "fields" in payload and isinstance(payload["fields"], dict | list):
             payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
@@ -631,7 +631,7 @@ class EngineClient(BaseClient):
         """
         path = "/api/admin/data_source"
         # Prepare payload as a dictionary for form data
-        payload = enginereq.model_dump()
+        payload = enginereq.model_dump(mode="json")
         payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
 
         if request_id is not None:
@@ -671,7 +671,7 @@ class EngineClient(BaseClient):
         """
         url = self._url("/api/insights")
         # Use model_dump for the dictionary, pass it to the json parameter
-        data_dict = docs.model_dump(exclude_none=True, exclude_unset=True)
+        data_dict = docs.model_dump(mode="json", exclude_none=True, exclude_unset=True)
         token = self._get_token(API_ENDPOINT_METADATA["update_insights"]["tokens"])
         request_headers = self.headers(token=token)
         # Changed to use self.session.post with await
@@ -731,7 +731,7 @@ class EngineClient(BaseClient):
         """
         url = self._url(f"/api/case_summaries/{request_id}")
         # The payload is the list of summary objects. `aiohttp` will serialize it.
-        data = [item.model_dump(exclude_none=True) for item in summary]
+        data = [item.model_dump(mode="json", exclude_none=True) for item in summary]
         token = self._get_token(API_ENDPOINT_METADATA["update_case_summary"]["tokens"])
         request_headers = self.headers(token=token)
         resp = await self.session.post(

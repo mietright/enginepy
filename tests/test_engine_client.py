@@ -3,7 +3,6 @@ import os
 from collections.abc import AsyncIterator
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, call
-from urllib.parse import urlencode
 
 import httpx
 import pytest
@@ -118,7 +117,7 @@ async def test_set_token_overrides_specific_token_when_no_key_given(
         mock.put(url__regex=rf".*{trigger_id}.*").mock(return_value=httpx.Response(200, json={"status": "ok"}))
         await client.action_trigger(trigger)
 
-        assert mock.called
+        assert len(mock.calls) > 0
         req = mock.calls.last.request
         assert req.headers["token"] == new_token
         assert req.headers["token"] != admin_token
@@ -325,7 +324,7 @@ async def test_create_request_success(client: EngineClient, test_endpoint: str, 
         mock.post(expected_url).mock(return_value=httpx.Response(201, json=response_payload))
         response = await client.create_request(req)
         assert response == response_payload
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
         assert req_sent.headers["content-type"].startswith("application/x-www-form-urlencoded")
