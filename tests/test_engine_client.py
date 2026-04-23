@@ -446,6 +446,7 @@ async def test_create_request_success(client: EngineClient, test_endpoint: str, 
         "funnel": "funnel_b",
         "fields": json.dumps([{"field": "field1", "answer": "value1", "type": "string"}], sort_keys=True, default=str),
         "request_id": None, # Explicitly set to None for creation in client code
+        "request_token": None,
     }
     response_payload = {"request_id": 789, "status": "created"}
     expected_url = f"{test_endpoint}/api/admin/data_source"
@@ -486,6 +487,7 @@ async def test_update_request_success(client: EngineClient, test_endpoint: str, 
         "funnel": "funnel_b_updated",
         "fields": json.dumps([{"field": "field1", "answer": "value1_updated", "type": "string"}], sort_keys=True, default=str),
         "request_id": request_id, # Set for update in client code
+        "request_token": None,
         "documents": "[]",
         "documents_presign": False,
     }

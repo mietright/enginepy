@@ -609,6 +609,7 @@ class EngineClient(BaseClient):
         if "fields" in payload and isinstance(payload["fields"], dict | list):
             payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
         payload["request_id"] = None  # Explicitly set to None for creation
+        payload["request_token"] = None
 
         token = self._get_token(API_ENDPOINT_METADATA["create_request"]["tokens"])
         request_headers = self.headers("form", token=token)
@@ -623,13 +624,16 @@ class EngineClient(BaseClient):
         resp.raise_for_status()
         return await resp.json()
 
-    async def update_request(self, request_id: int, enginereq: EngineRequest) -> Any:
+    async def update_request(
+        self, request_id: int | None, enginereq: EngineRequest, request_token: str | None = None
+    ) -> Any:
         """
         Updates an existing data source request in the engine.
 
         Args:
             request_id: The ID of the request to update.
             enginereq: An EngineRequest object containing the updated details.
+            request_token: The token of the request to update.
 
         Returns:
             The JSON response from the API, typically confirming the update.
@@ -637,12 +641,20 @@ class EngineClient(BaseClient):
 
         Raises:
             aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            ValueError: If neither request_id nor request_token is provided.
         """
         path = "/api/admin/data_source"
         # Prepare payload as a dictionary for form data
         payload = enginereq.model_dump()
         payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
-        payload["request_id"] = request_id  # Set the request_id for update
+
+        if request_id is not None:
+            payload["request_id"] = request_id
+        elif request_token is not None:
+            payload["request_token"] = request_token
+            payload["request_id"] = None
+        else:
+            raise ValueError("Must provide either request_id or request_token.")
 
         token = self._get_token(API_ENDPOINT_METADATA["update_request"]["tokens"])
         request_headers = self.headers("form", token=token)

@@ -3,7 +3,7 @@
 # pylint: disable=too-few-public-methods
 import logging
 from datetime import datetime
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
@@ -15,25 +15,25 @@ logger = logging.getLogger(__name__)
 SIGNATURE_FIELD = "e:information.signature:signature"
 
 
-class WithContentMode(str, Enum):
+class WithContentMode(StrEnum):
     FULL = "full"
     CHUNK = "chunk"
     SUMMARY = "summary"
     NONE = "none"
 
 
-class ManagerEnum(str, Enum):
+class ManagerEnum(StrEnum):
     OPENAI = "openai"
     QDRANT = "qdrant"
     NONE = "none"
 
 
-class OutputFormatEnum(str, Enum):
+class OutputFormatEnum(StrEnum):
     MARKDOWN = "markdown"
     JSON = "json"
 
 
-class SplitterType(str, Enum):
+class SplitterType(StrEnum):
     RECURSIVE = "recursive"
     CHAR = "char"
     SEMANTIC = "semantic"
@@ -277,6 +277,7 @@ class EngineRequest(BaseModel):
     funnel: str = Field(...)
     documents: str = Field(default="[]")
     request_id: int | None = Field(default=None)
+    request_token: str | None = Field(default=None)
     fields: list[EngineField] = Field(...)
     documents_presign: bool = Field(default=False)
 

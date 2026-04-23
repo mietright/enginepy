@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal  # Required for specific type hints not covered by built-ins
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # --- Enums for Status Fields ---
 
 
-class TelliEventEnum(str, Enum):
+class TelliEventEnum(StrEnum):
     """Enum for possible Telli events."""
 
     CALL_ENDED = "call_ended"
