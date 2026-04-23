@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, confloat
@@ -23,7 +23,7 @@ class AgentRunCost(BaseModel):
     )
 
 
-class AgreementReasonEnum(str, Enum):
+class AgreementReasonEnum(StrEnum):
     AGREED_EXPLICIT = "agreed_explicit"
     AGREED_IMPLICIT_BY_DEFENSE = "agreed_implicit_by_defense"
     AGREED_BY_PLAINTIFF_CONCESSION = "agreed_by_plaintiff_concession"
@@ -248,7 +248,7 @@ class ClassificationRentalCtx(BaseModel):
     document_id: int | None = Field(default=-1, title="Document Id")
 
 
-class ClassificationRentalType(str, Enum):
+class ClassificationRentalType(StrEnum):
     APPROVAL_OF_SETTLEMENT = "approval_of_settlement"
     APPROVAL_OF_SETTLEMENT_COPY = "approval_of_settlement_copy"
     ASSESMENT_OF_COSTS_APPLICATION = "assesment_of_costs_application"
@@ -317,14 +317,14 @@ class ClassificationRentalType(str, Enum):
     WRITTEN_PRELIMINARY_PROCEEDINGS = "written_preliminary_proceedings"
 
 
-class Condition(str, Enum):
+class Condition(StrEnum):
     LUXURIOUS = "luxurious"
     NORMAL = "normal"
     MINIMAL = "minimal"
     BAD = "bad"
 
 
-class Mode(str, Enum):
+class Mode(StrEnum):
     BYTES = "bytes"
     STRING = "string"
     B64 = "b64"
@@ -355,7 +355,7 @@ class CriterionGrade(BaseModel):
     reasoning: str = Field(..., title="Reasoning")
 
 
-class ExteriorKeyword(str, Enum):
+class ExteriorKeyword(StrEnum):
     EXTERIOR = "exterior"
     STAIRWELL = "stairwell"
     CORRIDOR = "corridor"
@@ -377,7 +377,7 @@ class FeaturesConfig(BaseModel):
     )
 
 
-class Importance(str, Enum):
+class Importance(StrEnum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
@@ -454,35 +454,35 @@ class MissingDocument(BaseModel):
     )
 
 
-class Client(str, Enum):
+class Client(StrEnum):
     OPENAI = "openai"
     GEMINI = "gemini"
     LITELLM = "litellm"
 
 
-class ApiMode(str, Enum):
+class ApiMode(StrEnum):
     CHAT = "chat"
     RESPONSE = "response"
 
 
-class ToolChoice(str, Enum):
+class ToolChoice(StrEnum):
     AUTO = "auto"
     REQUIRED = "required"
     NONE = "none"
 
 
-class Truncation(str, Enum):
+class Truncation(StrEnum):
     AUTO = "auto"
     DISABLED = "disabled"
 
 
-class Verbosity(str, Enum):
+class Verbosity(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
-class ResponseInclude(str, Enum):
+class ResponseInclude(StrEnum):
     FILE_SEARCH_CALL_RESULTS = "file_search_call.results"
     WEB_SEARCH_CALL_RESULTS = "web_search_call.results"
     WEB_SEARCH_CALL_ACTION_SOURCES = "web_search_call.action.sources"
@@ -493,7 +493,7 @@ class ResponseInclude(str, Enum):
     MESSAGE_OUTPUT_TEXT_LOGPROBS = "message.output_text.logprobs"
 
 
-class OutputFormatEnum(str, Enum):
+class OutputFormatEnum(StrEnum):
     MARKDOWN = "markdown"
     JSON = "json"
 
@@ -568,20 +568,20 @@ class PhotoSummaryOutput(BaseModel):
     )
 
 
-class Effort(str, Enum):
+class Effort(StrEnum):
     MINIMAL = "minimal"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
-class GenerateSummary(str, Enum):
+class GenerateSummary(StrEnum):
     AUTO = "auto"
     CONCISE = "concise"
     DETAILED = "detailed"
 
 
-class Summary1(str, Enum):
+class Summary1(StrEnum):
     AUTO = "auto"
     CONCISE = "concise"
     DETAILED = "detailed"
@@ -631,7 +631,7 @@ class ReplySnippet(BaseModel):
     text: str = Field(..., description="Text of the snippet", title="Text")
 
 
-class SourceType(str, Enum):
+class SourceType(StrEnum):
     URI = "uri"
     BASE64 = "base64"
 
@@ -695,7 +695,7 @@ class VersionResp(BaseModel):
     version: str = Field(..., title="Version")
 
 
-class WithContentMode(str, Enum):
+class WithContentMode(StrEnum):
     FULL = "full"
     CHUNK = "chunk"
     SUMMARY = "summary"
@@ -712,7 +712,7 @@ class WorkflowInfo(BaseModel):
     namespace: str | None = Field(default="", description="The namespace of the agent workflow run", title="Namespace")
 
 
-class WorkflowStepStatus(str, Enum):
+class WorkflowStepStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
