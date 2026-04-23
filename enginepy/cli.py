@@ -9,11 +9,11 @@ from enum import StrEnum
 from inspect import Parameter, Signature
 from typing import Annotated, Any, get_args, get_origin
 
+import httpx
 import pydantic
 import typer
 import yaml
 from ant31box.cmd.typer.default_config import app as default_config_app
-import httpx
 from rich.console import Console
 from rich.table import Table
 
