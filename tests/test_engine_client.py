@@ -174,7 +174,7 @@ async def test_health_success(client: EngineClient, test_endpoint: str, test_tok
         mock.get(f"{test_endpoint}/_health").mock(return_value=httpx.Response(200, json={"status": "ok"}))
         response = await client.health()
         assert response is True
-        assert mock.called
+        assert len(mock.calls) > 0
         req = mock.calls.last.request
         assert req.headers["token"] == test_token
         assert req.headers["accept"] == "*/*"
@@ -206,7 +206,7 @@ async def test_get_case_data_success(
         response = await client.get_case_data(request_id, with_summary=False)
 
         assert response.model_dump(exclude_none=True, exclude_unset=True) == expected_response_payload
-        assert mock.called
+        assert len(mock.calls) > 0
         req = mock.calls.last.request
         assert req.headers["token"] == test_token
         assert "request_id" in str(req.url)
@@ -245,7 +245,7 @@ async def test_update_doc_success(client: EngineClient, test_endpoint: str, test
         mock.post(f"{test_endpoint}/api/zieb/documents/ocr").mock(return_value=httpx.Response(200))
         result = await client.update_doc(doc_id, ocr_pages, pdf_url)
         assert result is True
-        assert mock.called
+        assert len(mock.calls) > 0
         req = mock.calls.last.request
         assert req.headers["token"] == test_token
         assert json.loads(req.content) == expected_payload
@@ -290,7 +290,7 @@ async def test_action_trigger_success(client: EngineClient, test_endpoint: str, 
 
         assert updated_trigger is trigger
         assert updated_trigger.status == response_payload
-        assert mock.called
+        assert len(mock.calls) > 0
         req = mock.calls.last.request
         assert req.headers["token"] == test_token
         assert "request_id" in str(req.url)
@@ -365,7 +365,7 @@ async def test_update_insights_success(client: EngineClient, test_endpoint: str,
         mock.post(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.update_insights(docs_resp)
         assert response == response_payload
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
         assert req_sent.headers["content-type"] == "application/json"
@@ -485,7 +485,7 @@ async def test_scheduled_call_response_success(client: EngineClient, test_endpoi
 
         assert response == response_payload
         mock_event.model_dump_json.assert_called_once_with(exclude_none=True, exclude_unset=True)
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
         assert json.loads(req_sent.content) == expected_payload
@@ -571,7 +571,7 @@ async def test_get_request_documents_success(
         assert len(response.request.files) == 1
         assert response.request.files[0].id == 2469711
         assert response.presigned_post.s3_url == "https://some.s3.url.com"
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
 
@@ -602,7 +602,7 @@ async def test_get_document_json_success(
         response = await client.get_document_url(doc_id)
         assert isinstance(response, DocumentUrlResponse)
         assert response.url == presigned_url
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
         assert req_sent.headers["accept"] == "application/json"
@@ -626,7 +626,7 @@ async def test_download_document_spooled_success(
 
         assert response_file.read() == file_content
         response_file.close()
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
 
