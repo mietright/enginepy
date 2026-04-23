@@ -677,15 +677,14 @@ class EngineClient(BaseClient):
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
-            params={},  # Keep params if needed, otherwise remove
-            json=data_dict,  # Use json parameter with the dictionary
+            params={},
+            json=data_dict,
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),
+            timeout=httpx.Timeout(30.0),
         )
         await self.log_request(resp)
         resp.raise_for_status()
-        return await resp.json()
+        return resp.json()
 
     async def scheduled_call_response(self, telli_event: TelliWebhook) -> dict[str, Any]:
         """
@@ -710,12 +709,11 @@ class EngineClient(BaseClient):
             url,
             json=data_dict,
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),
+            timeout=httpx.Timeout(30.0),
         )
         await self.log_request(resp)
         resp.raise_for_status()
-        return await resp.json()
+        return resp.json()
 
     async def update_case_summary(self, request_id: int, summary: list[SummaryResponseOutput]) -> dict[str, Any]:
         """
