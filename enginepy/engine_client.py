@@ -227,7 +227,7 @@ class EngineClient(BaseClient):
             True if the update was successful.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         url = self._url("/api/zieb/documents/ocr")
         data = {
@@ -264,7 +264,7 @@ class EngineClient(BaseClient):
             Note: Consider defining a specific Pydantic model for this response.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         url = self._url("/api/zieb/documents/update_suggestions")
         # Use model_dump for the dictionary, pass it to the json parameter
@@ -295,7 +295,7 @@ class EngineClient(BaseClient):
             A RequestDocumentsResponse object containing request files and S3 presigned post data.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
             pydantic.ValidationError: If the response data fails validation.
         """
         path = f"/api/admin/requests/{request_id}/documents.json"
@@ -321,7 +321,7 @@ class EngineClient(BaseClient):
             A DocumentUrlResponse object containing the presigned URL.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status.
+            httpx.HTTPStatusError: If the API returns an error status.
         """
         path = f"/api/admin/documents/{document_id}"
         token = self._get_token(API_ENDPOINT_METADATA["get_document_url"]["tokens"])
@@ -354,7 +354,7 @@ class EngineClient(BaseClient):
             - None if filepath was a full file path.
 
         Raises:
-            aiohttp.ClientResponseError: If the API or the redirected download fails.
+            httpx.HTTPStatusError: If the API or the redirected download fails.
         """
         path = f"/api/admin/documents/{document_id}"
         token = self._get_token(API_ENDPOINT_METADATA["download_document"]["tokens"])
@@ -415,7 +415,7 @@ class EngineClient(BaseClient):
             An UploadDocumentResponse object with the new document ID and request ID.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         path = f"/api/requests/{request_id}/documents/upload"
         payload: dict[str, str] = {
@@ -454,7 +454,7 @@ class EngineClient(BaseClient):
             Note: Consider defining a specific Pydantic model for this response structure.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         path = "/api/case_data"
         params = {
@@ -486,7 +486,7 @@ class EngineClient(BaseClient):
             A CaseRawData object containing the validated case data.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
             pydantic.ValidationError: If the response data fails validation against CaseRawData.
         """
         res = await self.get_case_data_all(request_id, with_summary, with_wwm)
@@ -500,7 +500,7 @@ class EngineClient(BaseClient):
             True if the health endpoint returns a 200 status, False otherwise.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx) other than 200.
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx) other than 200.
         """
         path: str = "/_health"
         token = self._get_token(API_ENDPOINT_METADATA["health"]["tokens"])
@@ -527,7 +527,7 @@ class EngineClient(BaseClient):
             The updated EngineTrigger object with its status field populated from the API response.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         path = f"/api/admin/action_triggers/{engine_trigger.trigger_id}"
         # Params should include query parameters
@@ -558,7 +558,7 @@ class EngineClient(BaseClient):
             A list of EngineTrigger objects, each updated with the status from the API response.
 
         Raises:
-            aiohttp.ClientResponseError: If any of the underlying `action_trigger` calls fail.
+            httpx.HTTPStatusError: If any of the underlying `action_trigger` calls fail.
             Exception: If `asyncio.gather` encounters other errors.
         """
         tasks = [
@@ -587,7 +587,7 @@ class EngineClient(BaseClient):
             Note: Consider defining a specific Pydantic model for this response.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         path = "/api/admin/data_source"
         # Prepare payload as a dictionary for form data
@@ -626,7 +626,7 @@ class EngineClient(BaseClient):
             Note: Consider defining a specific Pydantic model for this response.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
             ValueError: If neither request_id nor request_token is provided.
         """
         path = "/api/admin/data_source"
@@ -667,7 +667,7 @@ class EngineClient(BaseClient):
             Note: Consider defining a specific Pydantic model for this response.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         url = self._url("/api/insights")
         # Use model_dump for the dictionary, pass it to the json parameter
@@ -698,7 +698,7 @@ class EngineClient(BaseClient):
             Note: Consider defining a specific Pydantic model for this response.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         url = self._url("/api/scheduled_call_response")
         data_dict = json.loads(telli_event.model_dump_json(exclude_none=True, exclude_unset=True))
@@ -727,7 +727,7 @@ class EngineClient(BaseClient):
             A dictionary containing the API response.
 
         Raises:
-            aiohttp.ClientResponseError: If the API returns an error status (4xx or 5xx).
+            httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
         """
         url = self._url(f"/api/case_summaries/{request_id}")
         # The payload is the list of summary objects. `aiohttp` will serialize it.
