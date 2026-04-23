@@ -389,7 +389,7 @@ async def test_update_doc_suggestions_aws_success(client: EngineClient, test_end
         mock.post(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.update_doc_suggestions(aws_result)
         assert response == response_payload
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
 
@@ -409,7 +409,7 @@ async def test_update_doc_suggestions_agent_success(client: EngineClient, test_e
         mock.post(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.update_doc_suggestions(agent_result)
         assert response == response_payload
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
 
