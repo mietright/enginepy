@@ -3,7 +3,7 @@
 # pylint: disable=too-few-public-methods
 import logging
 from datetime import datetime
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
