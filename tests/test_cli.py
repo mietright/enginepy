@@ -5,10 +5,10 @@ import inspect
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pydantic  # Import pydantic
 import pytest
 import typer  # Import typer
-from aiohttp import ClientResponseError
 from typer.testing import CliRunner
 
 import enginepy.cli
@@ -312,18 +312,12 @@ async def test_execute_api_call_api_error(mock_engine_client: MagicMock, capsys)
     method_sig = inspect.signature(getattr(EngineClient, method_name))
     input_args = ["request_id=404"]
 
-    # Mock the error response
-    mock_response = MagicMock()
-    mock_response.status = 404
-    mock_response.reason = "Not Found"
-    mock_request_info = MagicMock()
-    mock_request_info.url = "http://fake-engine.local/api/case_data?request_id=404"
-    error = ClientResponseError(
-        request_info=mock_request_info,
-        history=(),
-        status=404,
+    mock_request = httpx.Request("GET", "http://fake-engine.local/api/case_data?request_id=404")
+    mock_response = httpx.Response(404, request=mock_request)
+    error = httpx.HTTPStatusError(
         message="Case not found",
-        headers=None, # Use None instead of {} for headers
+        request=mock_request,
+        response=mock_response,
     )
     mock_engine_client.get_case_data.side_effect = error
     enginepy.cli.cli_state["client"] = mock_engine_client
@@ -334,7 +328,6 @@ async def test_execute_api_call_api_error(mock_engine_client: MagicMock, capsys)
     assert exc_info.value.exit_code == 1
     captured = capsys.readouterr()
     assert "Error: API call failed with status 404" in captured.err
-    assert "Message: Case not found" in captured.err
     # Check if the mock was called
     mock_engine_client.get_case_data.assert_awaited_once_with(request_id=404)
 

@@ -240,10 +240,9 @@ class EngineClient(BaseClient):
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
-            params={},  # Keep params if needed, otherwise remove
-            json=data,  # Use json parameter for automatic serialization and content-type
+            params={},
+            json=data,
             headers=request_headers,
-            ssl=self.ssl_mode,
             timeout=httpx.Timeout(30.0),
         )
         await self.log_request(resp)
@@ -276,15 +275,14 @@ class EngineClient(BaseClient):
         # Changed to use self.session.post with await
         resp = await self.session.post(
             url,
-            params={},  # Keep params if needed, otherwise remove
-            json=data_dict,  # Use json parameter with the dictionary
+            params={},
+            json=data_dict,
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),
+            timeout=httpx.Timeout(30.0),
         )
         await self.log_request(resp)
         resp.raise_for_status()
-        return await resp.json()
+        return resp.json()
 
     async def get_request_documents(self, request_id: int) -> RequestDocumentsResponse:
         """
@@ -306,13 +304,11 @@ class EngineClient(BaseClient):
         resp = await self.session.get(
             self._url(path),
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),
+            timeout=httpx.Timeout(30.0),
         )
         await self.log_request(resp)
         resp.raise_for_status()
-        data = await resp.json()
-        return RequestDocumentsResponse.model_validate(data)
+        return RequestDocumentsResponse.model_validate(resp.json())
 
     async def get_document_url(self, document_id: int) -> DocumentUrlResponse:
         """
@@ -331,12 +327,11 @@ class EngineClient(BaseClient):
         token = self._get_token(API_ENDPOINT_METADATA["get_document_url"]["tokens"])
         headers = self.headers(token=token, extra={"Accept": "application/json"})
         resp = await self.session.get(
-            self._url(path), headers=headers, ssl=self.ssl_mode, timeout=ClientTimeout(total=30)
+            self._url(path), headers=headers, timeout=httpx.Timeout(30.0)
         )
         await self.log_request(resp)
         resp.raise_for_status()
-        data = await resp.json()
-        return DocumentUrlResponse.model_validate(data)
+        return DocumentUrlResponse.model_validate(resp.json())
 
     async def download_document(
         self, document_id: int, filepath: str | None = None
@@ -368,9 +363,7 @@ class EngineClient(BaseClient):
         resp = await self.session.get(
             self._url(path),
             headers=headers,
-            ssl=self.ssl_mode,
             timeout=httpx.Timeout(300.0),  # Increased timeout for downloads
-            allow_redirects=True,
         )
         await self.log_request(resp)
         resp.raise_for_status()
@@ -378,13 +371,14 @@ class EngineClient(BaseClient):
         if "s3" not in str(resp.url):
             logger.warning("The final URL after redirect does not seem to be a file storage URL: %s", resp.url)
 
-        content = await resp.aread() if hasattr(resp, "aread") else resp.content
+        content = resp.content
 
         if filepath:
             if os.path.isdir(filepath):
                 filename = "downloaded_file"  # Default filename
-                if resp.content_disposition and resp.content_disposition.filename:
-                    filename = resp.content_disposition.filename
+                content_disp = resp.headers.get("content-disposition", "")
+                if "filename=" in content_disp:
+                    filename = content_disp.split("filename=")[-1].strip().strip('"')
                 output_path = os.path.join(filepath, filename)
             else:
                 output_path = filepath
@@ -439,13 +433,11 @@ class EngineClient(BaseClient):
             self._url(path),
             data=payload,
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=300),
+            timeout=httpx.Timeout(300.0),
         )
         await self.log_request(resp)
         resp.raise_for_status()
-        data = await resp.json()
-        return UploadDocumentResponse.model_validate(data)
+        return UploadDocumentResponse.model_validate(resp.json())
 
     async def get_case_data_all(
         self, request_id: int, with_summary: bool = False, with_wwm: bool = True
@@ -476,12 +468,11 @@ class EngineClient(BaseClient):
             self._url(path),
             params=params,
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),  # Consistent timeout
+            timeout=httpx.Timeout(30.0),
         )
-        await self.log_request(resp)  # Log the request/response details
+        await self.log_request(resp)
         resp.raise_for_status()
-        return await resp.json()
+        return resp.json()
 
     async def get_case_data(self, request_id: int, with_summary: bool = False, with_wwm: bool = True) -> CaseRawData:
         """
@@ -517,13 +508,11 @@ class EngineClient(BaseClient):
         resp = await self.session.get(
             self._url(path),
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=httpx.Timeout(10.0),  # Shorter timeout for health check
+            timeout=httpx.Timeout(10.0),
         )
-        # Log request without body/params for GET
         await self.log_request(resp)
         resp.raise_for_status()
-        return resp.status == 200
+        return resp.status_code == 200
 
     async def action_trigger(self, engine_trigger: EngineTrigger) -> EngineTrigger:
         """
@@ -549,13 +538,11 @@ class EngineClient(BaseClient):
             self._url(path),
             params=params,
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),
-            # No body for this specific PUT in the original code
+            timeout=httpx.Timeout(30.0),
         )
-        await self.log_request(resp)  # BaseClient.log_request handles response details
+        await self.log_request(resp)
         resp.raise_for_status()
-        engine_trigger.status = await resp.json()  # Assuming status is updated based on response
+        engine_trigger.status = resp.json()
         return engine_trigger
 
     async def action_triggers(self, request_id: int, triggers: list[dict[str, str]]) -> list[EngineTrigger]:
@@ -616,13 +603,12 @@ class EngineClient(BaseClient):
         resp = await self.session.post(
             self._url(path),
             headers=request_headers,
-            ssl=self.ssl_mode,
-            data=payload,  # Use data for form encoding
-            timeout=ClientTimeout(total=30),
+            data=payload,
+            timeout=httpx.Timeout(30.0),
         )
-        await self.log_request(resp)  # BaseClient.log_request handles response details
+        await self.log_request(resp)
         resp.raise_for_status()
-        return await resp.json()
+        return resp.json()
 
     async def update_request(
         self, request_id: int | None, enginereq: EngineRequest, request_token: str | None = None
@@ -661,14 +647,13 @@ class EngineClient(BaseClient):
         resp = await self.session.put(
             self._url(path),
             headers=request_headers,
-            ssl=self.ssl_mode,
-            data=payload,  # Use data for form encoding
-            params={},  # Original had empty params for PUT
-            timeout=ClientTimeout(total=30),
+            data=payload,
+            params={},
+            timeout=httpx.Timeout(30.0),
         )
-        await self.log_request(resp)  # BaseClient.log_request handles response details
+        await self.log_request(resp)
         resp.raise_for_status()
-        return await resp.json()
+        return resp.json()
 
     async def update_insights(self, docs: DocsResponse) -> dict[str, Any]:
         """
@@ -755,9 +740,8 @@ class EngineClient(BaseClient):
             url,
             json=data,
             headers=request_headers,
-            ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),
+            timeout=httpx.Timeout(30.0),
         )
         await self.log_request(resp)
         resp.raise_for_status()
-        return await resp.json()
+        return resp.json()

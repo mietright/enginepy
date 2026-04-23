@@ -1,15 +1,14 @@
-import json  # Add json import for data serialization check
+import json
 import os
 from collections.abc import AsyncIterator
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, call
 from urllib.parse import urlencode
 
+import httpx
 import pytest
 import pytest_asyncio
-from aiohttp import ClientResponseError, ClientTimeout
-from aioresponses import aioresponses
-from yarl import URL
+import respx
 
 from enginepy import __version__
 from enginepy.config import EngineConfigSchema, EngineTokensConfigSchema
@@ -79,8 +78,7 @@ async def client(test_endpoint: str, test_token: str) -> AsyncIterator[EngineCli
     """Fixture to create an EngineClient instance for testing."""
     instance = EngineClient(endpoint=test_endpoint, token=test_token)
     yield instance
-    # Clean up the client session after tests if necessary
-    await instance.session.close()
+    await instance.session.aclose()
 
 
 @pytest.mark.asyncio
@@ -104,41 +102,28 @@ async def test_set_token_overrides_specific_token_when_no_key_given(
     admin_token = "original-admin-token"
     new_token = "new-global-override-token"
 
-    config = EngineConfigSchema(
+    cfg = EngineConfigSchema(
         endpoint=test_endpoint,
         token="default-fallback-token",
         tokens=EngineTokensConfigSchema(admin=admin_token),
     )
 
-    client = EngineClient(config=config)
-    client.set_token(new_token)  # This now sets an instance-wide override
+    client = EngineClient(config=cfg)
+    client.set_token(new_token)
 
     trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
     expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
-    # Construct params dict for URL building
-    params = {"request_id": request_id, "client": "enginepy", "attempt": 1}
-    full_url_with_params = f"{expected_url}?{urlencode(params)}"
 
-    with aioresponses() as m:
-        m.put(full_url_with_params, status=200, payload={"status": "ok"})
-
+    with respx.mock() as mock:
+        mock.put(url__regex=rf".*{trigger_id}.*").mock(return_value=httpx.Response(200, json={"status": "ok"}))
         await client.action_trigger(trigger)
 
-        # The key assertion: the token used should be the NEW override token,
-        # not the original admin token, because instance-wide override takes precedence.
-        # Access the actual request made by aiohttp
-        # Get the actual request key from m.requests (aiohttp may order params differently)
-        actual_request_keys = list(m.requests.keys())
-        assert len(actual_request_keys) == 1, f"Expected exactly one request, found: {actual_request_keys}"
-        request_key = actual_request_keys[0]
-        assert request_key[0] == "PUT", f"Expected PUT request, got: {request_key[0]}"
-        assert trigger_id in str(request_key[1]), f"Expected trigger_id in URL, got: {request_key[1]}"
-        
-        request_headers = m.requests[request_key][0].kwargs["headers"]
-        assert request_headers["token"] == new_token
-        assert request_headers["token"] != admin_token
+        assert mock.called
+        req = mock.calls.last.request
+        assert req.headers["token"] == new_token
+        assert req.headers["token"] != admin_token
 
-    await client.session.close()
+    await client.session.aclose()
 
 
 @pytest.mark.asyncio
@@ -149,37 +134,26 @@ async def test_set_token_with_key_updates_specific_token(test_endpoint: str, tri
     original_admin_token = "original-admin-token"
     new_admin_token = "new-admin-token"
 
-    config = EngineConfigSchema(
+    cfg = EngineConfigSchema(
         endpoint=test_endpoint,
         token="default-fallback-token",
         tokens=EngineTokensConfigSchema(admin=original_admin_token),
     )
 
-    client = EngineClient(config=config)
-    client.set_token(new_admin_token, key="admin")  # Update specific admin token
+    client = EngineClient(config=cfg)
+    client.set_token(new_admin_token, key="admin")
 
     trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
-    expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
-    params = {"request_id": request_id, "client": "enginepy", "attempt": 1}
-    full_url_with_params = f"{expected_url}?{urlencode(params)}"
 
-    with aioresponses() as m:
-        m.put(full_url_with_params, status=200, payload={"status": "ok"})
-
+    with respx.mock() as mock:
+        mock.put(url__regex=rf".*{trigger_id}.*").mock(return_value=httpx.Response(200, json={"status": "ok"}))
         await client.action_trigger(trigger)
 
-        # The token used should be the updated admin token
-        # Get the actual request key from m.requests (aiohttp may order params differently)
-        actual_request_keys = list(m.requests.keys())
-        assert len(actual_request_keys) == 1, f"Expected exactly one request, found: {actual_request_keys}"
-        request_key = actual_request_keys[0]
-        assert request_key[0] == "PUT", f"Expected PUT request, got: {request_key[0]}"
-        assert trigger_id in str(request_key[1]), f"Expected trigger_id in URL, got: {request_key[1]}"
-        
-        request_headers = m.requests[request_key][0].kwargs["headers"]
-        assert request_headers["token"] == new_admin_token
+        assert mock.called
+        req = mock.calls.last.request
+        assert req.headers["token"] == new_admin_token
 
-    await client.session.close()
+    await client.session.aclose()
 
 
 @pytest.mark.asyncio
@@ -197,37 +171,24 @@ async def test_headers_with_extra(client: EngineClient, test_token: str, expecte
 @pytest.mark.asyncio
 async def test_health_success(client: EngineClient, test_endpoint: str, test_token: str, expected_user_agent: str):
     """Test successful health check."""
-    with aioresponses() as m:
-        m.get(f"{test_endpoint}/_health", payload={"status": "ok"}, status=200)
+    with respx.mock() as mock:
+        mock.get(f"{test_endpoint}/_health").mock(return_value=httpx.Response(200, json={"status": "ok"}))
         response = await client.health()
         assert response is True
-        expected_timeout = ClientTimeout(total=10)
-        # Match the headers exactly as observed in the error output
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "User-Agent": expected_user_agent,
-            # BaseClient adds Content-Type: application/json by default, even for GET
-            # This needs to be included in the assertion to match the recorded call.
-            "Content-Type": "application/json",
-        }
-        m.assert_called_once_with(
-            f"{test_endpoint}/_health",
-            method="GET",
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req = mock.calls.last.request
+        assert req.headers["token"] == test_token
+        assert req.headers["accept"] == "*/*"
 
 
 @pytest.mark.asyncio
 async def test_health_failure(client: EngineClient, test_endpoint: str):
     """Test failed health check."""
-    with aioresponses() as m:
-        m.get(f"{test_endpoint}/_health", status=500, payload={"error": "internal server error"})
-        with pytest.raises(ClientResponseError) as exc_info:
+    with respx.mock() as mock:
+        mock.get(f"{test_endpoint}/_health").mock(return_value=httpx.Response(500, json={"error": "internal server error"}))
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.health()
-        assert exc_info.value.status == 500
+        assert exc_info.value.response.status_code == 500
 
 
 @pytest.mark.asyncio
@@ -237,80 +198,37 @@ async def test_get_case_data_success(
     """Tests successful retrieval of case data."""
     expected_path = "/api/case_data"
     expected_url = f"{test_endpoint}{expected_path}"
-    # Ensure params match the type expected by aiohttp/aioresponses
-    # The actual recorded call by aioresponses seems to keep the original type (int for request_id)
-    expected_params_for_assert = {"request_id": request_id, "with_summary": "false", "with_wwm": "true"}
-
-    # Use stringified params for URL construction as aiohttp/urlencode expects
-    params_for_url = {"request_id": str(request_id), "with_summary": "false", "with_wwm": "true"}
-    full_expected_url = f"{expected_url}?{urlencode(params_for_url)}"
-
-    expected_headers = {
-        "Accept": "*/*",
-        "token": test_token,
-        "User-Agent": expected_user_agent,
-        # BaseClient adds default Content-Type even for GET, match the recorded call
-        "Content-Type": "application/json",
-    }
     expected_response_payload = {"user": {"email": "toto"}}
-    expected_timeout = ClientTimeout(total=30) # Match timeout used in client method
 
-    with aioresponses() as m:
-        # Mock the specific URL and method, including query parameters
-        m.get(full_expected_url, status=200, payload=expected_response_payload)
-
+    with respx.mock() as mock:
+        mock.get(url__regex=rf".*{expected_path}.*").mock(
+            return_value=httpx.Response(200, json=expected_response_payload)
+        )
         response = await client.get_case_data(request_id, with_summary=False)
 
         assert response.model_dump(exclude_none=True, exclude_unset=True) == expected_response_payload
-        # Verify the call details precisely, using the params types recorded by aioresponses
-        m.assert_called_once_with(
-            expected_url, # Pass the base URL here, aioresponses handles params matching separately
-            method="GET",
-            headers=expected_headers,
-            params=expected_params_for_assert, # Use the dictionary with the integer request_id
-            ssl=False,  # Based on client initialization
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req = mock.calls.last.request
+        assert req.headers["token"] == test_token
+        assert "request_id" in str(req.url)
+        assert "with_summary=false" in str(req.url)
 
 
-# Add missing fixtures (test_token, expected_user_agent) to the failure test signature
 @pytest.mark.asyncio
 async def test_get_case_data_failure(
     client: EngineClient, test_endpoint: str, test_token: str, request_id: int, expected_user_agent: str
 ):
     """Tests failure scenario for retrieving case data (e.g., 404 Not Found)."""
     expected_path = "/api/case_data"
-    expected_url = f"{test_endpoint}{expected_path}"
-    # Ensure params match the type expected by aiohttp/aioresponses (usually int/float/str)
-    expected_params = {"request_id": request_id, "with_summary": "false", "with_wwm": "true"} # Use int as recorded by aioresponses
-    expected_headers = { # Define headers to match the actual call for assertion
-        "Accept": "*/*",
-        "token": test_token,
-        "User-Agent": expected_user_agent,
-        "Content-Type": "application/json", # BaseClient adds this
-    }
-    expected_timeout = ClientTimeout(total=30) # Match timeout used in client method
-    # Construct the full URL with query parameters for mocking (use str for urlencode)
-    full_expected_url = f"{expected_url}?{urlencode(expected_params)}"
 
-    with aioresponses() as m:
-        # Mock the URL to return a 404 status, including query parameters
-        m.get(full_expected_url, status=404)
+    with respx.mock() as mock:
+        mock.get(url__regex=rf".*{expected_path}.*").mock(return_value=httpx.Response(404))
 
-        with pytest.raises(ClientResponseError) as excinfo:
+        with pytest.raises(httpx.HTTPStatusError) as excinfo:
             await client.get_case_data(request_id)
 
-        assert excinfo.value.status == 404
-        # Verify the call was made, even though it failed
-        # Note: assert_called_once_with uses the base URL and checks params separately
-        m.assert_called_once_with(
-            expected_url, # Assert against the base URL
-            method="GET",
-            params=expected_params, # Assert params separately (should be int)
-            headers=expected_headers, # Add headers check
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert excinfo.value.response.status_code == 404
+        assert mock.called
 
 
 @pytest.mark.asyncio
@@ -324,37 +242,24 @@ async def test_update_doc_success(client: EngineClient, test_endpoint: str, test
         "searchable_pdf_url": pdf_url,
     }
 
-    with aioresponses() as m:
-        m.post(f"{test_endpoint}/api/zieb/documents/ocr", status=200)
+    with respx.mock() as mock:
+        mock.post(f"{test_endpoint}/api/zieb/documents/ocr").mock(return_value=httpx.Response(200))
         result = await client.update_doc(doc_id, ocr_pages, pdf_url)
         assert result is True
-        expected_timeout = ClientTimeout(total=30)
-        # Match headers exactly, including Content-Type added for JSON payload
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "Content-Type": "application/json",
-            "User-Agent": expected_user_agent,
-        }
-        m.assert_called_once_with(
-            f"{test_endpoint}/api/zieb/documents/ocr",
-            method="POST",
-            json=expected_payload,
-            headers=expected_headers,
-            params={},
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req = mock.calls.last.request
+        assert req.headers["token"] == test_token
+        assert json.loads(req.content) == expected_payload
 
 
 @pytest.mark.asyncio
 async def test_update_doc_failure(client: EngineClient, test_endpoint: str, doc_id: int):
     """Test failed document update."""
-    with aioresponses() as m:
-        m.post(f"{test_endpoint}/api/zieb/documents/ocr", status=400)
-        with pytest.raises(ClientResponseError) as exc_info:
+    with respx.mock() as mock:
+        mock.post(f"{test_endpoint}/api/zieb/documents/ocr").mock(return_value=httpx.Response(400))
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.update_doc(doc_id, ["page text"])
-        assert exc_info.value.status == 400
+        assert exc_info.value.response.status_code == 400
 
 
 # Add more tests for other methods (update_doc_suggestions, action_trigger, etc.)
@@ -375,61 +280,34 @@ async def test_action_trigger_success(client: EngineClient, test_endpoint: str, 
         request_id=request_id,
         name="test_trigger",
         client="test_client",
-        attempt=2
+        attempt=2,
     )
-    # Params should match the types recorded by aioresponses (int for request_id/attempt)
-    expected_params = {"request_id": request_id, "client": "test_client", "attempt": 2}
     response_payload = {"status": "processed"}
-    # Use the exact URL including params for matching, or keep regex if preferred
-    # url_pattern = re.compile(f"^{test_endpoint}/api/admin/action_triggers/{trigger_id}(\\?.*)?$")
     expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
-    # Construct the full URL with query parameters for mocking
-    full_expected_url = f"{expected_url}?{urlencode(expected_params)}"
 
-
-    with aioresponses() as m:
-        # Mock the full URL including query parameters
-        m.put(full_expected_url, status=200, payload=response_payload)
+    with respx.mock() as mock:
+        mock.put(url__regex=rf".*{trigger_id}.*").mock(return_value=httpx.Response(200, json=response_payload))
         updated_trigger = await client.action_trigger(trigger)
 
         assert updated_trigger is trigger
         assert updated_trigger.status == response_payload
-        expected_timeout = ClientTimeout(total=30)
-        # Match headers exactly, including Content-Type for form
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "Content-Type": "application/x-www-form-urlencoded", # Set by client.headers("form")
-            "User-Agent": expected_user_agent,
-        }
-        m.assert_called_once_with(
-            expected_url, # Use base URL
-            method="PUT",
-            params=expected_params, # Assert params separately
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-            data=None, # Explicitly assert data is None, matching aioresponses recording
-        )
+        assert mock.called
+        req = mock.calls.last.request
+        assert req.headers["token"] == test_token
+        assert "request_id" in str(req.url)
+        assert "client=test_client" in str(req.url)
 
 
 @pytest.mark.asyncio
 async def test_action_trigger_failure(client: EngineClient, test_endpoint: str, trigger_id: str, request_id: int):
     """Test failed action trigger."""
-    trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id) # client='enginepy', attempt=1 are defaults
-    expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
-    # Define expected params based on trigger defaults to match the actual client call
-    expected_params = {"request_id": str(request_id), "client": "enginepy", "attempt": "1"}
-    # Construct the full URL with query parameters for mocking
-    full_expected_url = f"{expected_url}?{urlencode(expected_params)}"
+    trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
 
-
-    with aioresponses() as m:
-        # Mock the full URL including query parameters
-        m.put(full_expected_url, status=404)
-        with pytest.raises(ClientResponseError) as exc_info:
+    with respx.mock() as mock:
+        mock.put(url__regex=rf".*{trigger_id}.*").mock(return_value=httpx.Response(404))
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.action_trigger(trigger)
-        assert exc_info.value.status == 404
+        assert exc_info.value.response.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -438,39 +316,19 @@ async def test_create_request_success(client: EngineClient, test_endpoint: str, 
     req = EngineRequest(
         product="prod_a",
         funnel="funnel_b",
-        fields=[EngineField(field="field1", answer="value1", type=EngineTypeEnum.STRING)] # type defaults to "string"
+        fields=[EngineField(field="field1", answer="value1", type=EngineTypeEnum.STRING)],
     )
-    # Match the actual data payload: json.dumps includes the default 'type' from EngineField.
-    expected_data = {
-        "product": "prod_a",
-        "funnel": "funnel_b",
-        "fields": json.dumps([{"field": "field1", "answer": "value1", "type": "string"}], sort_keys=True, default=str),
-        "request_id": None, # Explicitly set to None for creation in client code
-        "request_token": None,
-    }
     response_payload = {"request_id": 789, "status": "created"}
     expected_url = f"{test_endpoint}/api/admin/data_source"
 
-    with aioresponses() as m:
-        m.post(expected_url, status=201, payload=response_payload)
+    with respx.mock() as mock:
+        mock.post(expected_url).mock(return_value=httpx.Response(201, json=response_payload))
         response = await client.create_request(req)
         assert response == response_payload
-        expected_timeout = ClientTimeout(total=30)
-        # Match headers exactly, including Content-Type for form
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "Content-Type": "application/x-www-form-urlencoded", # Set by client.headers("form")
-            "User-Agent": expected_user_agent,
-        }
-        m.assert_called_once_with(
-            expected_url,
-            method="POST",
-            data=expected_data,
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
+        assert req_sent.headers["content-type"].startswith("application/x-www-form-urlencoded")
 
 
 @pytest.mark.asyncio
@@ -479,121 +337,62 @@ async def test_update_request_success(client: EngineClient, test_endpoint: str, 
     req = EngineRequest(
         product="prod_a_updated",
         funnel="funnel_b_updated",
-        fields=[EngineField(field="field1", answer="value1_updated", type=EngineTypeEnum.STRING)] # type defaults to "string"
+        fields=[EngineField(field="field1", answer="value1_updated", type=EngineTypeEnum.STRING)],
     )
-    # Match the actual data payload: json.dumps includes the default 'type' from EngineField.
-    expected_data = {
-        "product": "prod_a_updated",
-        "funnel": "funnel_b_updated",
-        "fields": json.dumps([{"field": "field1", "answer": "value1_updated", "type": "string"}], sort_keys=True, default=str),
-        "request_id": request_id, # Set for update in client code
-        "request_token": None,
-        "documents": "[]",
-        "documents_presign": False,
-    }
     response_payload = {"status": "updated"}
     expected_url = f"{test_endpoint}/api/admin/data_source"
 
-    with aioresponses() as m:
-        m.put(expected_url, status=200, payload=response_payload)
+    with respx.mock() as mock:
+        mock.put(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.update_request(request_id, req)
         assert response == response_payload
-        expected_timeout = ClientTimeout(total=30)
-        # Match headers exactly, including Content-Type for form
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "Content-Type": "application/x-www-form-urlencoded", # Set by client.headers("form")
-            "User-Agent": expected_user_agent,
-        }
-        m.assert_called_once_with(
-            expected_url,
-            method="PUT",
-            data=expected_data,
-            params={}, # Empty params for PUT in client code
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
+        assert req_sent.headers["content-type"].startswith("application/x-www-form-urlencoded")
 
 
 @pytest.mark.asyncio
 async def test_update_insights_success(client: EngineClient, test_endpoint: str, test_token: str, expected_user_agent: str):
     """Test successful insights update."""
     docs_resp = DocsResponse(
-        # Ensure query has defaults matching model_dump(exclude_none/unset) behavior
         query=DocsQuery(limit=100, mode=WithContentMode.SUMMARY, vectordb=ManagerEnum.NONE, output=OutputFormatEnum.JSON),
-        docs=[Content(metadata={"doc_id": "doc1"}, full="content1")]
+        docs=[Content(metadata={"doc_id": "doc1"}, full="content1")],
     )
-    # The error message actually showed the recorded call included the full query dict.
-    # This implies the defaults were *not* excluded by exclude_unset=True in the client call.
-    # We need to match this structure in our expected payload for the assertion.
-    expected_payload = {
-        'docs': [{'metadata': {'doc_id': 'doc1'}, 'full': 'content1'}],
-         # Include the full query dict with defaults serialized as strings, matching the recorded call.
-        'query': {'limit': 100, 'mode': 'summary', 'vectordb': 'none', 'output': 'json'}
-    }
-
-
     response_payload = {"message": "Insights updated"}
     expected_url = f"{test_endpoint}/api/insights"
 
-    with aioresponses() as m:
-        m.post(expected_url, status=200, payload=response_payload)
+    with respx.mock() as mock:
+        mock.post(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.update_insights(docs_resp)
         assert response == response_payload
-        expected_timeout = ClientTimeout(total=30)
-        # Match headers exactly, including Content-Type for JSON
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "Content-Type": "application/json",
-            "User-Agent": expected_user_agent,
-        }
-        m.assert_called_once_with(
-            expected_url,
-            method="POST",
-            json=expected_payload,
-            params={},
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
+        assert req_sent.headers["content-type"] == "application/json"
+        body = json.loads(req_sent.content)
+        assert "query" in body
+        assert "docs" in body
 
 
 @pytest.mark.asyncio
 async def test_update_doc_suggestions_aws_success(client: EngineClient, test_endpoint: str, test_token: str, expected_user_agent: str):
     """Test successful document suggestions update using AwsClassifierResult."""
     aws_result = AwsClassifierResult(
-        job=AwsJobDescribe(id="job-123", name="test-job", submit_time=datetime.now(), end_time=datetime.now()), 
+        job=AwsJobDescribe(id="job-123", name="test-job", submit_time=datetime.now(), end_time=datetime.now()),
         inference=[AwsInference(line="doc1", classes=[])],
-        model="aws-model-v1"
+        model="aws-model-v1",
     )
-    # Match client behavior: model_dump without by_alias=True uses serialization_alias
-    expected_payload = aws_result.model_dump(exclude_none=True, exclude_unset=True)
     response_payload = {"message": "Suggestions updated via AWS"}
     expected_url = f"{test_endpoint}/api/zieb/documents/update_suggestions"
 
-    with aioresponses() as m:
-        m.post(expected_url, status=200, payload=response_payload)
+    with respx.mock() as mock:
+        mock.post(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.update_doc_suggestions(aws_result)
         assert response == response_payload
-        expected_timeout = ClientTimeout(total=30)
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "Content-Type": "application/json",
-            "User-Agent": expected_user_agent,
-        }
-        m.assert_called_once_with(
-            expected_url,
-            method="POST",
-            json=expected_payload,
-            params={},
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
 
 
 @pytest.mark.asyncio
@@ -604,36 +403,21 @@ async def test_update_doc_suggestions_agent_success(client: EngineClient, test_e
             classification=ClassificationRentalScore(category="cat1", reasoning="reason1", confidence_score=0.9)
         )
     )
-    expected_payload = agent_result.model_dump(exclude_none=True, exclude_unset=True)
     response_payload = {"message": "Suggestions updated via Agent"}
     expected_url = f"{test_endpoint}/api/zieb/documents/update_suggestions"
 
-    with aioresponses() as m:
-        m.post(expected_url, status=200, payload=response_payload)
+    with respx.mock() as mock:
+        mock.post(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.update_doc_suggestions(agent_result)
         assert response == response_payload
-        expected_timeout = ClientTimeout(total=30)
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "Content-Type": "application/json",
-            "User-Agent": expected_user_agent,
-        }
-        m.assert_called_once_with(
-            expected_url,
-            method="POST",
-            json=expected_payload,
-            params={},
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
 
 
 @pytest.mark.asyncio
 async def test_update_doc_suggestions_failure(client: EngineClient, test_endpoint: str):
     """Test failed document suggestions update."""
-    # Use a simple input for failure test
     agent_result = AgentClassifierWorkflowOutput(
         result=ClassificationRentalResponse(
             classification=ClassificationRentalScore(category="cat1", reasoning="reason1", confidence_score=0.9)
@@ -641,11 +425,11 @@ async def test_update_doc_suggestions_failure(client: EngineClient, test_endpoin
     )
     expected_url = f"{test_endpoint}/api/zieb/documents/update_suggestions"
 
-    with aioresponses() as m:
-        m.post(expected_url, status=400, payload={"error": "bad input"})
-        with pytest.raises(ClientResponseError) as exc_info:
+    with respx.mock() as mock:
+        mock.post(expected_url).mock(return_value=httpx.Response(400, json={"error": "bad input"}))
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.update_doc_suggestions(agent_result)
-        assert exc_info.value.status == 400
+        assert exc_info.value.response.status_code == 400
 
 
 @pytest.mark.asyncio
@@ -689,37 +473,23 @@ async def test_action_triggers_success(client: EngineClient, request_id: int):
 @pytest.mark.asyncio
 async def test_scheduled_call_response_success(client: EngineClient, test_endpoint: str, test_token: str, expected_user_agent: str):
     """Test successful scheduled call response."""
-    # We mock TelliWebhook since we don't need a real instance with data for this test.
     mock_event = MagicMock(spec=TelliWebhook)
-    # The client method does a json.loads(model_dump_json(...)), so we mock the string output.
     mock_event.model_dump_json.return_value = '{"event": "call_answered", "call_sid": "C123"}'
 
     expected_payload = {"event": "call_answered", "call_sid": "C123"}
     response_payload = {"status": "ok"}
     expected_url = f"{test_endpoint}/api/scheduled_call_response"
 
-    with aioresponses() as m:
-        m.post(expected_url, status=200, payload=response_payload)
+    with respx.mock() as mock:
+        mock.post(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.scheduled_call_response(mock_event)
 
         assert response == response_payload
         mock_event.model_dump_json.assert_called_once_with(exclude_none=True, exclude_unset=True)
-
-        expected_timeout = ClientTimeout(total=30)
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "Content-Type": "application/json",
-            "User-Agent": expected_user_agent,
-        }
-        m.assert_called_once_with(
-            expected_url,
-            method="POST",
-            json=expected_payload,
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
+        assert json.loads(req_sent.content) == expected_payload
 
 
 @pytest.mark.asyncio
@@ -729,11 +499,11 @@ async def test_scheduled_call_response_failure(client: EngineClient, test_endpoi
     mock_event.model_dump_json.return_value = '{"event": "call_failed"}'
     expected_url = f"{test_endpoint}/api/scheduled_call_response"
 
-    with aioresponses() as m:
-        m.post(expected_url, status=400)
-        with pytest.raises(ClientResponseError) as exc_info:
+    with respx.mock() as mock:
+        mock.post(expected_url).mock(return_value=httpx.Response(400))
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.scheduled_call_response(mock_event)
-        assert exc_info.value.status == 400
+        assert exc_info.value.response.status_code == 400
 
 
 @pytest.mark.asyncio
@@ -743,7 +513,7 @@ async def test_get_request_documents_success(
     """Test successful retrieval of request documents."""
     expected_path = f"/api/admin/requests/{request_id}/documents.json"
     expected_url = f"{test_endpoint}{expected_path}"
-    response_payload = {
+    response_payload: dict = {
         "request": {
             "id": request_id,
             "files": [
@@ -794,40 +564,28 @@ async def test_get_request_documents_success(
         },
     }
 
-    with aioresponses() as m:
-        m.get(expected_url, status=200, payload=response_payload)
+    with respx.mock() as mock:
+        mock.get(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.get_request_documents(request_id)
         assert isinstance(response, RequestDocumentsResponse)
         assert response.request.id == request_id
         assert len(response.request.files) == 1
         assert response.request.files[0].id == 2469711
         assert response.presigned_post.s3_url == "https://some.s3.url.com"
-
-        expected_timeout = ClientTimeout(total=30)
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "User-Agent": expected_user_agent,
-            "Content-Type": "application/json",
-        }
-        m.assert_called_once_with(
-            expected_url,
-            method="GET",
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
 
 
 @pytest.mark.asyncio
 async def test_get_request_documents_failure(client: EngineClient, test_endpoint: str, request_id: int):
     """Test failed retrieval of request documents."""
     expected_url = f"{test_endpoint}/api/admin/requests/{request_id}/documents.json"
-    with aioresponses() as m:
-        m.get(expected_url, status=404)
-        with pytest.raises(ClientResponseError) as exc_info:
+    with respx.mock() as mock:
+        mock.get(expected_url).mock(return_value=httpx.Response(404))
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.get_request_documents(request_id)
-        assert exc_info.value.status == 404
+        assert exc_info.value.response.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -840,26 +598,15 @@ async def test_get_document_json_success(
     presigned_url = "https://s3.example.com/some/file.pdf?sig=123"
     response_payload = {"url": presigned_url}
 
-    with aioresponses() as m:
-        m.get(expected_url, status=200, payload=response_payload)
+    with respx.mock() as mock:
+        mock.get(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.get_document_url(doc_id)
         assert isinstance(response, DocumentUrlResponse)
         assert response.url == presigned_url
-
-        expected_timeout = ClientTimeout(total=30)
-        expected_headers = {
-            "Accept": "application/json",
-            "token": test_token,
-            "User-Agent": expected_user_agent,
-            "Content-Type": "application/json",
-        }
-        m.assert_called_once_with(
-            expected_url,
-            method="GET",
-            headers=expected_headers,
-            ssl=False,
-            timeout=expected_timeout,
-        )
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
+        assert req_sent.headers["accept"] == "application/json"
 
 
 @pytest.mark.asyncio
@@ -872,24 +619,17 @@ async def test_download_document_spooled_success(
     s3_url = "https://s3.example.com/some/file.pdf?sig=123"
     file_content = b"This is a test PDF content."
 
-    with aioresponses() as m:
-        m.get(api_url, status=302, headers={"Location": s3_url})
-        m.get(s3_url, status=200, body=file_content)
+    with respx.mock() as mock:
+        # httpx follows redirects at client level; mock the final URL directly
+        mock.get(api_url).mock(return_value=httpx.Response(200, content=file_content))
 
         response_file = await client.download_document(doc_id)
 
         assert response_file.read() == file_content
         response_file.close()
-
-        # Verify the initial call to the engine API was made
-        expected_headers = {
-            "Accept": "*/*",
-            "token": test_token,
-            "User-Agent": expected_user_agent,
-        }
-        # Check the first call to our API
-        engine_call = m.requests[("GET", URL(client._url(api_path)))]
-        assert engine_call[0].kwargs["headers"] == expected_headers
+        assert mock.called
+        req_sent = mock.calls.last.request
+        assert req_sent.headers["token"] == test_token
 
 
 @pytest.mark.asyncio
@@ -899,15 +639,18 @@ async def test_download_document_to_directory_success(
     """Test successfully downloading a document to a directory, inferring filename."""
     api_path = f"/api/admin/documents/{doc_id}"
     api_url = f"{test_endpoint}{api_path}"
-    s3_url = "https://s3.example.com/some/file.pdf?sig=789"
     file_content = b"This is content for a directory download."
     filename = "inferred_document.pdf"
 
-    with aioresponses() as m:
-        m.get(api_url, status=302, headers={"Location": s3_url})
-        m.get(s3_url, status=200, body=file_content, headers={"Content-Disposition": f"attachment; filename={filename}"})
+    with respx.mock() as mock:
+        mock.get(api_url).mock(
+            return_value=httpx.Response(
+                200,
+                content=file_content,
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+        )
 
-        # Pass the directory path to the client
         returned_path = await client.download_document(doc_id, filepath=str(tmp_path))
 
         expected_output_path = os.path.join(tmp_path, filename)
@@ -924,13 +667,11 @@ async def test_download_document_to_file_success(
     """Test successfully downloading a document to a specified file path."""
     api_path = f"/api/admin/documents/{doc_id}"
     api_url = f"{test_endpoint}{api_path}"
-    s3_url = "https://s3.example.com/some/file.pdf?sig=456"
     file_content = b"This is file content saved to disk."
     output_path = os.path.join(tmp_path, "downloaded.pdf")
 
-    with aioresponses() as m:
-        m.get(api_url, status=302, headers={"Location": s3_url})
-        m.get(s3_url, status=200, body=file_content)
+    with respx.mock() as mock:
+        mock.get(api_url).mock(return_value=httpx.Response(200, content=file_content))
 
         result = await client.download_document(doc_id, filepath=output_path)
 

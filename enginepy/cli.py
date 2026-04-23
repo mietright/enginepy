@@ -13,7 +13,7 @@ import pydantic
 import typer
 import yaml
 from ant31box.cmd.typer.default_config import app as default_config_app
-from httpx import HTTPStatusError
+import httpx
 from rich.console import Console
 from rich.table import Table
 
@@ -228,7 +228,7 @@ async def _execute_api_call(
         # Print the result
         _print_result(result)
 
-    except HTTPStatusError as e:
+    except httpx.HTTPStatusError as e:
         logger.error("API call failed: Status=%s, Message=%s, URL=%s", e.response.status_code, str(e), e.request.url)
         error_body = "Could not retrieve error body."
         try:
