@@ -326,9 +326,7 @@ class EngineClient(BaseClient):
         path = f"/api/admin/documents/{document_id}"
         token = self._get_token(API_ENDPOINT_METADATA["get_document_url"]["tokens"])
         headers = self.headers(token=token, extra={"Accept": "application/json"})
-        resp = await self.session.get(
-            self._url(path), headers=headers, timeout=httpx.Timeout(30.0)
-        )
+        resp = await self.session.get(self._url(path), headers=headers, timeout=httpx.Timeout(30.0))
         await self.log_request(resp)
         resp.raise_for_status()
         return DocumentUrlResponse.model_validate(resp.json())

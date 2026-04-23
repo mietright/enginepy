@@ -111,7 +111,6 @@ async def test_set_token_overrides_specific_token_when_no_key_given(
     client.set_token(new_token)
 
     trigger = EngineTrigger(trigger_id=trigger_id, request_id=request_id)
-    expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
 
     with respx.mock() as mock:
         mock.put(url__regex=rf".*{trigger_id}.*").mock(return_value=httpx.Response(200, json={"status": "ok"}))
@@ -196,7 +195,6 @@ async def test_get_case_data_success(
 ):
     """Tests successful retrieval of case data."""
     expected_path = "/api/case_data"
-    expected_url = f"{test_endpoint}{expected_path}"
     expected_response_payload = {"user": {"email": "toto"}}
 
     with respx.mock() as mock:
@@ -282,7 +280,6 @@ async def test_action_trigger_success(client: EngineClient, test_endpoint: str, 
         attempt=2,
     )
     response_payload = {"status": "processed"}
-    expected_url = f"{test_endpoint}/api/admin/action_triggers/{trigger_id}"
 
     with respx.mock() as mock:
         mock.put(url__regex=rf".*{trigger_id}.*").mock(return_value=httpx.Response(200, json=response_payload))
@@ -615,7 +612,6 @@ async def test_download_document_spooled_success(
     """Test successfully downloading a document file to a SpooledTemporaryFile."""
     api_path = f"/api/admin/documents/{doc_id}"
     api_url = f"{test_endpoint}{api_path}"
-    s3_url = "https://s3.example.com/some/file.pdf?sig=123"
     file_content = b"This is a test PDF content."
 
     with respx.mock() as mock:
