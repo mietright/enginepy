@@ -9,7 +9,7 @@ from tempfile import SpooledTemporaryFile
 from typing import Any, Literal
 
 import aiofiles
-from aiohttp.client import ClientTimeout
+import httpx
 from ant31box.client.base import BaseClient
 
 from enginepy.config import EngineConfigSchema
@@ -244,7 +244,7 @@ class EngineClient(BaseClient):
             json=data,  # Use json parameter for automatic serialization and content-type
             headers=request_headers,
             ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=30),
+            timeout=httpx.Timeout(30.0),
         )
         await self.log_request(resp)
         resp.raise_for_status()
@@ -369,7 +369,7 @@ class EngineClient(BaseClient):
             self._url(path),
             headers=headers,
             ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=300),  # Increased timeout for downloads
+            timeout=httpx.Timeout(300.0),  # Increased timeout for downloads
             allow_redirects=True,
         )
         await self.log_request(resp)
@@ -378,7 +378,7 @@ class EngineClient(BaseClient):
         if "s3" not in str(resp.url):
             logger.warning("The final URL after redirect does not seem to be a file storage URL: %s", resp.url)
 
-        content = await resp.read()
+        content = await resp.aread() if hasattr(resp, "aread") else resp.content
 
         if filepath:
             if os.path.isdir(filepath):
@@ -518,7 +518,7 @@ class EngineClient(BaseClient):
             self._url(path),
             headers=request_headers,
             ssl=self.ssl_mode,
-            timeout=ClientTimeout(total=10),  # Shorter timeout for health check
+            timeout=httpx.Timeout(10.0),  # Shorter timeout for health check
         )
         # Log request without body/params for GET
         await self.log_request(resp)
