@@ -15,25 +15,25 @@ logger = logging.getLogger(__name__)
 SIGNATURE_FIELD = "e:information.signature:signature"
 
 
-class WithContentMode(str, Enum):
+class WithContentMode(StrEnum):
     FULL = "full"
     CHUNK = "chunk"
     SUMMARY = "summary"
     NONE = "none"
 
 
-class ManagerEnum(str, Enum):
+class ManagerEnum(StrEnum):
     OPENAI = "openai"
     QDRANT = "qdrant"
     NONE = "none"
 
 
-class OutputFormatEnum(str, Enum):
+class OutputFormatEnum(StrEnum):
     MARKDOWN = "markdown"
     JSON = "json"
 
 
-class SplitterType(str, Enum):
+class SplitterType(StrEnum):
     RECURSIVE = "recursive"
     CHAR = "char"
     SEMANTIC = "semantic"
