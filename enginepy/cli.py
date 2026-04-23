@@ -12,8 +12,8 @@ from typing import Annotated, Any, get_args, get_origin
 import pydantic
 import typer
 import yaml
-from httpx import HTTPStatusError
 from ant31box.cmd.typer.default_config import app as default_config_app
+from httpx import HTTPStatusError
 from rich.console import Console
 from rich.table import Table
 
@@ -238,7 +238,7 @@ async def _execute_api_call(
             logger.error("Failed to read error body: %s", read_err)
 
         typer.echo(
-            f"Error: API call failed with status {e.response.status_code}.\nMessage: {str(e)}\nBody Snippet: {error_body}",
+            f"Error: API call failed with status {e.response.status_code}.\nMessage: {e!s}\nBody Snippet: {error_body}",
             err=True,
         )
         raise typer.Exit(code=1) from e
