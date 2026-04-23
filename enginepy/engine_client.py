@@ -624,7 +624,9 @@ class EngineClient(BaseClient):
         resp.raise_for_status()
         return await resp.json()
 
-    async def update_request(self, request_id: int | None, enginereq: EngineRequest, request_token: str | None = None) -> Any:
+    async def update_request(
+        self, request_id: int | None, enginereq: EngineRequest, request_token: str | None = None
+    ) -> Any:
         """
         Updates an existing data source request in the engine.
 
@@ -645,7 +647,7 @@ class EngineClient(BaseClient):
         # Prepare payload as a dictionary for form data
         payload = enginereq.model_dump()
         payload["fields"] = json.dumps(payload["fields"], sort_keys=True, default=str)
-        
+
         if request_id is not None:
             payload["request_id"] = request_id
         elif request_token is not None:
