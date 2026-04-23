@@ -12,7 +12,7 @@ from typing import Annotated, Any, get_args, get_origin
 import pydantic
 import typer
 import yaml
-from aiohttp import ClientResponseError
+from httpx import HTTPStatusError
 from ant31box.cmd.typer.default_config import app as default_config_app
 from rich.console import Console
 from rich.table import Table
@@ -228,20 +228,17 @@ async def _execute_api_call(
         # Print the result
         _print_result(result)
 
-    except ClientResponseError as e:
-        logger.error("API call failed: Status=%s, Message=%s, URL=%s", e.status, e.message, e.request_info.url)
+    except HTTPStatusError as e:
+        logger.error("API call failed: Status=%s, Message=%s, URL=%s", e.response.status_code, str(e), e.request.url)
         error_body = "Could not retrieve error body."
         try:
-            if client and client.session and not client.session.closed:
-                error_body = e.message  # aiohttp message often contains body snippet
-                logger.error("API Error Body Snippet: %s", error_body)
-            else:
-                logger.warning("Client session closed or unavailable, cannot read error body.")
+            error_body = e.response.text
+            logger.error("API Error Body Snippet: %s", error_body)
         except Exception as read_err:
             logger.error("Failed to read error body: %s", read_err)
 
         typer.echo(
-            f"Error: API call failed with status {e.status}.\nMessage: {e.message}\nBody Snippet: {error_body}",
+            f"Error: API call failed with status {e.response.status_code}.\nMessage: {str(e)}\nBody Snippet: {error_body}",
             err=True,
         )
         raise typer.Exit(code=1) from e
