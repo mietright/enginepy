@@ -277,6 +277,7 @@ class EngineRequest(BaseModel):
     funnel: str = Field(...)
     documents: str = Field(default="[]")
     request_id: int | None = Field(default=None)
+    request_token: str | None = Field(default=None)
     fields: list[EngineField] = Field(...)
     documents_presign: bool = Field(default=False)
 
