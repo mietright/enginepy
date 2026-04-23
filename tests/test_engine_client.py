@@ -148,7 +148,7 @@ async def test_set_token_with_key_updates_specific_token(test_endpoint: str, tri
         mock.put(url__regex=rf".*{trigger_id}.*").mock(return_value=httpx.Response(200, json={"status": "ok"}))
         await client.action_trigger(trigger)
 
-        assert mock.called
+        assert len(mock.calls) > 0
         req = mock.calls.last.request
         assert req.headers["token"] == new_admin_token
 
@@ -227,7 +227,7 @@ async def test_get_case_data_failure(
             await client.get_case_data(request_id)
 
         assert excinfo.value.response.status_code == 404
-        assert mock.called
+        assert len(mock.calls) > 0
 
 
 @pytest.mark.asyncio
@@ -345,7 +345,7 @@ async def test_update_request_success(client: EngineClient, test_endpoint: str, 
         mock.put(expected_url).mock(return_value=httpx.Response(200, json=response_payload))
         response = await client.update_request(request_id, req)
         assert response == response_payload
-        assert mock.called
+        assert len(mock.calls) > 0
         req_sent = mock.calls.last.request
         assert req_sent.headers["token"] == test_token
         assert req_sent.headers["content-type"].startswith("application/x-www-form-urlencoded")
