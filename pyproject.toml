@@ -12,7 +12,7 @@ dependencies = [
     "pyyaml",
     "sentry-sdk[fastapi]",
     "typing-extensions",
-    "ant31box[cli] @ git+https://github.com/ant31/ant31box.git@httpx",
+    "ant31box[cli] @ git+https://github.com/ant31/ant31box.git@main",
     "httpx",
     "logfire[httpx] (>=3.10.0,<4.0.0)",
     "pyyaml (>=6.0,<7.0.0)",
