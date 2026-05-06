@@ -474,6 +474,12 @@ class WorkflowInfo(BaseModel):
     wid: str | None = Field(default="", description="The ID of the agent workflow to run", title="Wid")
 
 
+class InferResponse(BaseModel):
+    document_id: str | None = Field(default=None)
+    prediction: list[dict] | None = Field(default=None)
+    model_info: dict | None = Field(default=None)
+
+
 class ClassificationRentalScore(BaseModel):
     model_config = ConfigDict(
         extra="allow",

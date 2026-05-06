@@ -23,6 +23,7 @@ from enginepy.models import (
     EngineRequest,
     EngineTokenName,
     EngineTrigger,
+    InferResponse,
     RequestDocumentsResponse,
     UploadDocumentResponse,
 )
@@ -251,7 +252,7 @@ class EngineClient(BaseClient):
         return True
 
     async def update_doc_suggestions(
-        self, updates: AwsClassifierResult | AgentClassifierWorkflowOutput
+        self, updates: AwsClassifierResult | AgentClassifierWorkflowOutput | InferResponse
     ) -> dict[str, Any]:
         """
         Updates document suggestions based on classifier results.
