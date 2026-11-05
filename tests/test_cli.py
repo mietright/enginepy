@@ -5,6 +5,7 @@ import inspect
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import click
 import httpx
 import pydantic  # Import pydantic
 import pytest
@@ -92,8 +93,10 @@ def test_cli_no_command_shows_help(runner: CliRunner):
     """Verify that running the CLI with no command shows help."""
     result = runner.invoke(cli)
     assert result.exit_code == 0  # Typer exits 0 when showing help via callback
-    assert "Usage: enginepy [OPTIONS] COMMAND [ARGS]..." in result.stdout
-    assert "Enginepy CLI tool to interact with the Engine API." in result.stdout
+    # Typer forces colours on GitHub Actions, so compare the plain text
+    stdout = click.unstyle(result.stdout)
+    assert "Usage: enginepy [OPTIONS] COMMAND [ARGS]..." in stdout
+    assert "Enginepy CLI tool to interact with the Engine API." in stdout
 
 
 # Apply the fixture to ensure mocks are active and stored in cli_state
@@ -234,9 +237,11 @@ def test_cli_command_missing_required_arg_option(runner: CliRunner, mock_engine_
     # Check exit code and error message (Typer exits 2 for usage errors like missing options)
     assert result.exit_code == 2
     # Check that the core error message parts are present, handling potential line breaks in Typer's output
-    assert "requires arguments" in result.stderr
-    assert "provided via -i/--input" in result.stderr # Check the part after the potential line break
-    assert "Required: request_id" in result.stderr # Also check that the required arg is mentioned
+    # Typer forces colours on GitHub Actions, so compare the plain text
+    stderr = click.unstyle(result.stderr)
+    assert "requires arguments" in stderr
+    assert "provided via -i/--input" in stderr # Check the part after the potential line break
+    assert "Required: request_id" in stderr # Also check that the required arg is mentioned
     assert mock_execute_partially.called # Ensure the patched function was entered
 
 
