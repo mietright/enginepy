@@ -570,6 +570,94 @@ class RelationToolAttribute(BaseModel):
         return values
 
 
+class ClosureReviewCase(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: int = Field(..., title="Id")
+    product_name: str | None = Field(default=None, title="Product Name")
+    life_cycle_id: str | None = Field(default=None, title="Life Cycle Id")
+    phase: str | None = Field(default=None, title="Phase")
+    created_at: datetime | None = Field(default=None, title="Created At")
+    closed_at: datetime | None = Field(default=None, title="Closed At")
+
+
+class ClosureReviewStatus(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    status_id: str = Field(..., title="Status Id")
+    status_title: str | None = Field(default=None, title="Status Title")
+    reason_id: str | None = Field(default=None, title="Reason Id")
+    reason_title: str | None = Field(default=None, title="Reason Title")
+    created_at: datetime | None = Field(default=None, title="Created At")
+    deleted_at: datetime | None = Field(default=None, title="Deleted At")
+
+
+class ClosureReviewCloseEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    event: str = Field(..., description="closed or opened", title="Event")
+    created_at: datetime | None = Field(default=None, title="Created At")
+    by_system_agent: bool = Field(default=False, title="By System Agent")
+
+
+class ClosureReviewNote(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: str = Field(..., description="comment, outbound_call, inbound_call or not_reached_call", title="Type")
+    posted_at: datetime | None = Field(default=None, title="Posted At")
+    content: str = Field(default="", title="Content")
+    content_length: int = Field(default=0, title="Content Length")
+    content_truncated: bool = Field(default=False, title="Content Truncated")
+
+
+class ClosureReviewTicket(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: str | None = Field(default=None, title="Type")
+    title: str | None = Field(default=None, title="Title")
+    state: str | None = Field(default=None, title="State")
+    todo_category_key: str | None = Field(default=None, title="Todo Category Key")
+    created_at: datetime | None = Field(default=None, title="Created At")
+    completed_at: datetime | None = Field(default=None, title="Completed At")
+    deleted_at: datetime | None = Field(default=None, title="Deleted At")
+    comment: str = Field(default="", title="Comment")
+    comment_length: int = Field(default=0, title="Comment Length")
+    comment_truncated: bool = Field(default=False, title="Comment Truncated")
+
+
+class ClosureReviewEmail(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    direction: str = Field(..., description="incoming or outgoing", title="Direction")
+    party: str = Field(
+        ..., description="client, counter_party, external_lawyer, third_party or internal", title="Party"
+    )
+    subject: str | None = Field(default=None, title="Subject")
+    sent_at: datetime | None = Field(default=None, title="Sent At")
+    attachment_document_ids: list[int] = Field(default_factory=list, title="Attachment Document Ids")
+    body: str = Field(default="", title="Body")
+    body_length: int = Field(default=0, title="Body Length")
+    body_truncated: bool = Field(default=False, title="Body Truncated")
+
+
+class ClosureReviewDocument(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: int = Field(..., title="Id")
+    filename: str | None = Field(default=None, title="Filename")
+    type: str | None = Field(default=None, title="Type")
+    source: str | None = Field(default=None, title="Source")
+    incoming: bool | None = Field(default=None, title="Incoming")
+    created_at: datetime | None = Field(default=None, title="Created At")
+    ocr: str = Field(default="", title="OCR")
+    ocr_length: int = Field(default=0, title="OCR Length")
+    ocr_truncated: bool = Field(default=False, title="OCR Truncated")
+
+
+class ClosureReview(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    case: ClosureReviewCase = Field(..., title="Case")
+    statuses: list[ClosureReviewStatus] = Field(default_factory=list, title="Statuses")
+    close_events: list[ClosureReviewCloseEvent] = Field(default_factory=list, title="Close Events")
+    notes: list[ClosureReviewNote] = Field(default_factory=list, title="Notes")
+    tickets: list[ClosureReviewTicket] = Field(default_factory=list, title="Tickets")
+    emails: list[ClosureReviewEmail] = Field(default_factory=list, title="Emails")
+    documents: list[ClosureReviewDocument] = Field(default_factory=list, title="Documents")
+
+
 class CaseRawData(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -581,6 +669,7 @@ class CaseRawData(BaseModel):
     counterparties: list[dict[str, Any]] | None = Field(default=None, title="Counterparties")
     information: CaseRawDataInformation | None = Field(default=None, title="Information")
     summaries: list[Summary] | None = Field(default=None, title="Summaries")
+    closure_review: ClosureReview | None = Field(default=None, title="Closure Review")
     attributes: dict[str, list[RelationToolAttribute]] = Field(
         default_factory=dict,
         description="Dictionary of attributes with categories as keys and lists of attributes as values",

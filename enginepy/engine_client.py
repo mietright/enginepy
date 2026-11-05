@@ -439,7 +439,11 @@ class EngineClient(BaseClient):
         return UploadDocumentResponse.model_validate(resp.json())
 
     async def get_case_data_all(
-        self, request_id: int, with_summary: bool = False, with_wwm: bool = True
+        self,
+        request_id: int,
+        with_summary: bool = False,
+        with_wwm: bool = True,
+        with_closure_review: bool = False,
     ) -> dict[str, Any]:
         """
         Retrieves case data associated with a specific request ID.
@@ -447,6 +451,8 @@ class EngineClient(BaseClient):
         Args:
             request_id: The ID of the request for which to retrieve case data.
             with_summary: Flag to indicate if summary should be included.
+            with_closure_review: Flag to include the case file (statuses, close events, notes,
+                tickets, emails, documents) used to review closed cases.
 
         Returns:
             A dictionary containing the case data.
@@ -460,6 +466,7 @@ class EngineClient(BaseClient):
             "request_id": request_id,
             "with_summary": str(with_summary).lower(),
             "with_wwm": str(with_wwm).lower(),
+            "with_closure_review": str(with_closure_review).lower(),
         }
         token = self._get_token(API_ENDPOINT_METADATA["get_case_data_all"]["tokens"])
         request_headers = self.headers(token=token)  # Default headers are suitable for GET expecting JSON
@@ -467,19 +474,27 @@ class EngineClient(BaseClient):
             self._url(path),
             params=params,
             headers=request_headers,
-            timeout=httpx.Timeout(30.0),
+            # The closure review carries every email, note and document text of the case
+            timeout=httpx.Timeout(60.0 if with_closure_review else 30.0),
         )
         await self.log_request(resp)
         resp.raise_for_status()
         return resp.json()
 
-    async def get_case_data(self, request_id: int, with_summary: bool = False, with_wwm: bool = True) -> CaseRawData:
+    async def get_case_data(
+        self,
+        request_id: int,
+        with_summary: bool = False,
+        with_wwm: bool = True,
+        with_closure_review: bool = False,
+    ) -> CaseRawData:
         """
         Retrieves case data associated with a specific request ID and validates into CaseRawData.
 
         Args:
             request_id: The ID of the request for which to retrieve case data.
             with_summary: Flag to indicate if summary should be included.
+            with_closure_review: Flag to include the closure review case file.
 
         Returns:
             A CaseRawData object containing the validated case data.
@@ -488,7 +503,7 @@ class EngineClient(BaseClient):
             httpx.HTTPStatusError: If the API returns an error status (4xx or 5xx).
             pydantic.ValidationError: If the response data fails validation against CaseRawData.
         """
-        res = await self.get_case_data_all(request_id, with_summary, with_wwm)
+        res = await self.get_case_data_all(request_id, with_summary, with_wwm, with_closure_review)
         return CaseRawData.model_validate(res)
 
     async def health(self) -> bool:
