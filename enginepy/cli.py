@@ -251,9 +251,9 @@ async def _execute_api_call(
         raise typer.Exit(code=1) from e
     finally:
         # Close session - consider if this is the right place long-term
-        if client and client.session and not client.session.closed:
+        if client and client.session and not client.session.is_closed:
             logger.info("Closing client session after command %s.", method_name)
-            await client.session.close()
+            await client.session.aclose()
 
 
 def _create_sync_command_wrapper(

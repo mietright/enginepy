@@ -60,9 +60,10 @@ def mock_engine_client() -> MagicMock:
     mock_client.update_request = AsyncMock(return_value={"status": "updated"})
     mock_client.update_insights = AsyncMock(return_value={"message": "insights updated"})
     mock_client.update_doc_suggestions = AsyncMock(return_value={"message": "suggestions updated"})
-    # Mock the session close method
+    # Mock the httpx session close method
     mock_client.session = MagicMock()
-    mock_client.session.close = AsyncMock()
+    mock_client.session.is_closed = False
+    mock_client.session.aclose = AsyncMock()
     return mock_client
 
 

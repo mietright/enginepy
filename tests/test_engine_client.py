@@ -229,6 +229,97 @@ async def test_get_case_data_failure(
 
 
 @pytest.mark.asyncio
+async def test_get_case_data_without_closure_review(client: EngineClient, request_id: int):
+    """Tests that the closure review is not requested by default and keeps the 30s timeout."""
+    with respx.mock() as mock:
+        mock.get(url__regex=r".*/api/case_data.*").mock(return_value=httpx.Response(200, json={"user": {}}))
+        response = await client.get_case_data(request_id)
+
+        req = mock.calls.last.request
+        assert "with_closure_review=false" in str(req.url)
+        assert req.extensions["timeout"]["read"] == 30.0
+        assert response.closure_review is None
+
+
+@pytest.mark.asyncio
+async def test_get_case_data_with_closure_review(client: EngineClient, request_id: int):
+    """Tests that the closure review is requested with a longer timeout and parsed into typed models."""
+    payload = {
+        "user": {"email": "toto"},
+        "closure_review": {
+            "case": {"id": request_id, "product_name": "rent-control-dca", "closed_at": "2026-10-01T10:00:00.000Z"},
+            "statuses": [
+                {
+                    "status_id": "withdrawn_us",
+                    "status_title": "Withdrawn by us",
+                    "reason_id": "low_success",
+                    "reason_title": "Low success",
+                    "created_at": "2026-09-30T10:00:00.000Z",
+                    "deleted_at": None,
+                }
+            ],
+            "close_events": [{"event": "closed", "created_at": "2026-10-01T10:00:00.000Z", "by_system_agent": True}],
+            "notes": [
+                {
+                    "type": "outbound_call",
+                    "posted_at": "2026-09-29T10:00:00.000Z",
+                    "content": "Client is moving",
+                    "content_length": 16,
+                    "content_truncated": False,
+                }
+            ],
+            "tickets": [],
+            "emails": [
+                {
+                    "direction": "incoming",
+                    "party": "client",
+                    "subject": "Kündigung",
+                    "sent_at": "2026-09-28T10:00:00.000Z",
+                    "attachment_document_ids": [7],
+                    "body": "Ich ziehe aus",
+                    "body_length": 13,
+                    "body_truncated": False,
+                }
+            ],
+            "documents": [
+                {
+                    "id": 7,
+                    "filename": "kuendigung.pdf",
+                    "type": "termination",
+                    "source": "email_attached",
+                    "incoming": True,
+                    "created_at": "2026-09-28T10:00:00.000Z",
+                    "ocr": "Kündigung",
+                    "ocr_length": 9,
+                    "ocr_truncated": False,
+                }
+            ],
+        },
+    }
+
+    with respx.mock() as mock:
+        mock.get(url__regex=r".*/api/case_data.*").mock(return_value=httpx.Response(200, json=payload))
+        response = await client.get_case_data(request_id, with_wwm=False, with_closure_review=True)
+
+        req = mock.calls.last.request
+        assert "with_closure_review=true" in str(req.url)
+        assert "with_wwm=false" in str(req.url)
+        assert req.extensions["timeout"]["read"] == 60.0
+
+        review = response.closure_review
+        assert review is not None
+        assert review.case.id == request_id
+        assert review.case.closed_at == datetime.fromisoformat("2026-10-01T10:00:00+00:00")
+        assert review.statuses[0].reason_id == "low_success"
+        assert review.close_events[0].by_system_agent is True
+        assert review.notes[0].type == "outbound_call"
+        assert review.tickets == []
+        assert review.emails[0].party == "client"
+        assert review.emails[0].attachment_document_ids == [7]
+        assert review.documents[0].ocr == "Kündigung"
+
+
+@pytest.mark.asyncio
 async def test_update_doc_success(client: EngineClient, test_endpoint: str, test_token: str, doc_id: int, expected_user_agent: str):
     """Test successful document update."""
     ocr_pages = ["page 1 text", "page 2 text"]
